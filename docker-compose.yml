@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: tsqr-postgres
+    environment:
+      POSTGRES_DB: tsqr_tool_library
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tsqr-net
+
+  tool-lib:
+    build:
+      context: ../tsqr-tool-lib
+      dockerfile: Dockerfile
+    container_name: tsqr-tool-lib
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=tsqr_tool_library;Username=postgres;Password=postgres"
+    networks:
+      - tsqr-net
+
+  gateway:
+    build:
+      context: ../tsqr-gateway
+      dockerfile: Dockerfile
+    container_name: tsqr-gateway
+    ports:
+      - "5000:8080"
+    depends_on:
+      - tool-lib
+      - ui
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Docker"
+      Jwt__Key: "dev-key-not-for-production-use-32chars!"
+    networks:
+      - tsqr-net
+
+  ui:
+    build:
+      context: ../tsqr-ui
+      dockerfile: Dockerfile
+    container_name: tsqr-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+    environment:
+      API_URL: "http://gateway:8080"
+    networks:
+      - tsqr-net
+
+  support:
+    build:
+      context: ../tsqr-support
+      dockerfile: Dockerfile
+    container_name: tsqr-support
+    ports:
+      - "4200:80"
+    networks:
+      - tsqr-net
+
+volumes:
+  pgdata:
+
+networks:
+  tsqr-net:
+    driver: bridge
