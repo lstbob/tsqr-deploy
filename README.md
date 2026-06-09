@@ -1,21 +1,49 @@
 # TSQR Platform — Local Deployment
 
-This project contains everything needed to run the full TSQR microservice architecture locally via Docker Compose.
+Docker Compose orchestration for the full TSQR microservice architecture.
 
 ## Architecture
 
 ```
-Browser → tsqr-ui:3000 → tsqr-gateway:8080 → tsqr-tool-lib:8080 → postgres:5432
-Browser → tsqr-support:4200 (static SPA via nginx)
+                         ┌──────────────────────────────────────────────┐
+                         │           tsqr-gateway (port 5000)          │
+                         │         YARP Reverse Proxy (single entry)   │
+                         └──────┬──────────────────┬───────────────────┘
+                                │                  │
+                    ┌───────────▼────┐    ┌────────▼──────────┐
+                    │   /api/*       │    │   /* (everything) │
+                    │  → tool-lib    │    │   → tsqr-ui       │
+                    └───────────┬────┘    └────────────────────┘
+                                │
+              ┌─────────────────▼──────────────────┐
+              │         tsqr-tool-lib               │
+              │   .NET 9 + Dapper + PostgreSQL      │
+              └─────────────────┬───────────────────┘
+                                │
+                    ┌───────────▼────────────┐
+                    │      postgres:16        │
+                    │   tsqr_tool_library DB  │
+                    └────────────────────────┘
+
+Browser → tsqr-support:4200 (standalone static SPA via nginx)
 ```
 
-| Service | Tech | Port (host) | Description |
-|---------|------|-------------|-------------|
-| `postgres` | PostgreSQL 16 | 5432 | Database |
-| `tool-lib` | .NET 9 | — | Tool library API (internal) |
-| `gateway` | .NET 9 | 5000 | API Gateway (auth, rate-limiting, proxy) |
-| `ui` | Next.js 16 | 3000 | Main user interface |
-| `support` | Angular 20 | 4200 | Support portal |
+| Service | Tech | Host Port | Internal | Description |
+|---------|------|-----------|----------|-------------|
+| `gateway` | .NET 10 + YARP | **5000** | 8080 | **Single entry point** — proxies `/api/*` to tool-lib, `/*` to UI |
+| `ui` | Next.js 16 / React 19 | — | 3000 | Main user interface (internal, accessed via gateway) |
+| `tool-lib` | .NET 9 / Dapper / MediatR | — | 8080 | Tool library API (internal, not exposed) |
+| `postgres` | PostgreSQL 16 | 5432 | 5432 | Database (exposed for admin tools only) |
+| `support` | Angular 20 / nginx | **4200** | 80 | Static support portal (standalone access) |
+
+## Request Flow
+
+```
+Browser → localhost:5000/          → YARP spa → tsqr-ui:3000  → serves HTML page
+Browser → localhost:5000/api/tools → YARP tool-api → tool-lib:8080 → postgres
+  (server-side)                    → ui fetches API_URL=http://gateway:8080/api/...
+Browser → localhost:4200           → tsqr-support:80 → nginx serves static SPA
+```
 
 ## Prerequisites
 
@@ -25,67 +53,43 @@ Browser → tsqr-support:4200 (static SPA via nginx)
 ## Quick Start
 
 ```bash
-# From the tsqr-deploy directory
 cd tsqr-deploy
-
-# Build and start all services
 docker compose up --build
-
-# Run in detached mode
-docker compose up --build -d
 ```
 
 ## Access
 
-| Service | URL |
-|---------|-----|
-| Main UI | http://localhost:3000 |
-| Support Portal | http://localhost:4200 |
-| Gateway API | http://localhost:5000 |
-| Tool Library API (direct) | http://localhost:5000/api/tools (via gateway) |
-| Health Check | http://localhost:5000/api/gateway/status |
+| URL | What |
+|-----|------|
+| http://localhost:5000 | **Main UI** — full TSQR application (via gateway) |
+| http://localhost:5000/api/tools | Tool library API (via gateway) |
+| http://localhost:5000/api/dashboard/stats | Dashboard stats API (via gateway) |
+| http://localhost:4200 | **Support Portal** — standalone static site |
+| http://localhost:5432 | PostgreSQL (direct, for admin tools) |
 
 ## Stopping
 
 ```bash
-# Stop all services
-docker compose down
-
-# Stop and remove volumes (deletes database data)
-docker compose down -v
+docker compose down       # stop services
+docker compose down -v    # stop + delete database data
 ```
 
 ## Viewing Logs
 
 ```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f gateway
+docker compose logs -f              # all services
+docker compose logs -f gateway       # specific service
 docker compose logs -f tool-lib
 docker compose logs -f ui
 ```
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust values as needed:
+Key environment variables (set in `docker-compose.yml`):
 
-```bash
-cp .env.example .env
-```
-
-Key environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `POSTGRES_PASSWORD` | postgres | Database password |
-| `ConnectionStrings__DefaultConnection` | (set) | Tool-lib DB connection string |
-| `ToolLibBaseUrl` | http://tool-lib:8080 | Gateway → Tool-lib URL |
-| `API_URL` | http://gateway:8080 | Next.js → Gateway URL |
-
-## Next Steps
-
-- The gateway currently has basic `RequestHandlingMiddleware` and `GatewayController` stubs. Add JWT authentication and rate limiting before production use.
-- The `tsqr-support` Angular app is served as static files — no backend integration is wired yet.
-- For production, consider adding `restart: unless-stopped` to services and using a reverse proxy like Traefik or Caddy for TLS termination.
+| Variable | Description |
+|----------|-------------|
+| `ConnectionStrings__DefaultConnection` | Tool-lib → PostgreSQL connection |
+| `ASPNETCORE_ENVIRONMENT` | Gateway config profile (set to `Docker`) |
+| `Jwt__Key` | JWT signing key for gateway auth |
+| `API_URL` | Next.js → Gateway URL for server-side API calls |
