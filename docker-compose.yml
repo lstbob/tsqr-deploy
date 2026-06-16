@@ -3,19 +3,23 @@ services:
     image: postgres:16
     container_name: tsqr-postgres
     environment:
-      POSTGRES_DB: tsqr_tool_library
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Bind to loopback only so the database is reachable from host-based admin
+    # tools but NOT from the wider network. App services reach it over tsqr-net.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    security_opt:
+      - no-new-privileges:true
     networks:
       - tsqr-net
 
@@ -28,7 +32,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=tsqr_tool_library;Username=postgres;Password=postgres"
+      ConnectionStrings__DefaultConnection: ${TOOL_LIB_CONNECTION}
+      # Shared symmetric signing key — MUST match the gateway's key.
+      Jwt__Key: ${JWT_KEY}
+    security_opt:
+      - no-new-privileges:true
     networks:
       - tsqr-net
 
@@ -44,7 +52,9 @@ services:
       - ui
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
-      Jwt__Key: "dev-key-not-for-production-use-32chars!"
+      Jwt__Key: ${JWT_KEY}
+    security_opt:
+      - no-new-privileges:true
     networks:
       - tsqr-net
 
@@ -57,6 +67,8 @@ services:
       - gateway
     environment:
       API_URL: "http://gateway:8080"
+    security_opt:
+      - no-new-privileges:true
     networks:
       - tsqr-net
 
@@ -67,6 +79,8 @@ services:
     container_name: tsqr-support
     ports:
       - "4200:80"
+    security_opt:
+      - no-new-privileges:true
     networks:
       - tsqr-net
 
