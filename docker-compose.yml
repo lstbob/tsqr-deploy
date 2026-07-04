@@ -38,7 +38,7 @@ services:
       ConnectionStrings__DefaultConnection: ${TOOL_LIB_CONNECTION}
       Jwt__Key: ${JWT_KEY}
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/dashboard/stats || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
