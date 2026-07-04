@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS RefreshTokens (
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_UserId ON RefreshTokens(UserId);
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_TokenHash ON RefreshTokens(TokenHash);
 
+CREATE TABLE IF NOT EXISTS PasswordResetTokens (
+    Id              UUID PRIMARY KEY,
+    UserId          UUID NOT NULL REFERENCES Users(Id),
+    TokenHash       VARCHAR(128) NOT NULL UNIQUE,
+    ExpiresAt       TIMESTAMP NOT NULL,
+    CreatedAt       TIMESTAMP NOT NULL DEFAULT now(),
+    IsUsed          BOOLEAN NOT NULL DEFAULT FALSE,
+    UsedAt          TIMESTAMP NULL
+);
+
+CREATE INDEX IF NOT EXISTS IX_PasswordResetTokens_TokenHash ON PasswordResetTokens(TokenHash);
+CREATE INDEX IF NOT EXISTS IX_PasswordResetTokens_UserId ON PasswordResetTokens(UserId);
+
 -- Seed: admin user. Password = "ChangeMe!123" (Pbkdf2, 100k iter, HMACSHA256).
 -- Format: "{iterations}.{salt-base64}.{hash-base64}". Regenerate via autheo's
 -- IPasswordHasher.Hash if you want to rotate. The default is intentionally
