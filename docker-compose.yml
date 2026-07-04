@@ -85,7 +85,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ConnectionStrings__DefaultConnection: ${IDENTITY_CONNECTION}
+      ConnectionStrings__IdentityDb: ${IDENTITY_CONNECTION}
       Jwt__Key: ${JWT_KEY}
       ASPNETCORE_ENVIRONMENT: Production
     healthcheck:
