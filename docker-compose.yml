@@ -125,6 +125,8 @@ services:
       context: ../tsqr-ui
       dockerfile: Dockerfile
     container_name: tsqr-ui
+    ports:
+      - "3000:3000"
     environment:
       API_URL: "http://gateway:8080"
       NEXT_PUBLIC_SUPPORT_URL: "http://localhost:4200"
