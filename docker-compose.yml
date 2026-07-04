@@ -28,6 +28,8 @@ services:
     build:
       context: ../tsqr-tool-lib
       dockerfile: Dockerfile
+      args:
+        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
     container_name: tsqr-tool-lib
     depends_on:
       postgres:
@@ -50,6 +52,8 @@ services:
     build:
       context: ../tsqr-autheo
       dockerfile: Dockerfile
+      args:
+        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
     container_name: tsqr-autheo
     depends_on:
       postgres:
@@ -73,6 +77,8 @@ services:
     build:
       context: ../tsqr-support
       dockerfile: Dockerfile
+      args:
+        GITHUB_PACKAGES_TOKEN: ${GITHUB_PACKAGES_TOKEN}
     container_name: tsqr-support
     depends_on:
       postgres:
