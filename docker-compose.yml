@@ -15,7 +15,7 @@ services:
       - ./infra/03-autheo.sql:/docker-entrypoint-initdb.d/03-autheo.sql:ro
       - ./infra/04-support.sql:/docker-entrypoint-initdb.d/04-support.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
