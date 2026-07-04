@@ -5,44 +5,45 @@ Docker Compose orchestration for the full TSQR microservice architecture.
 ## Architecture
 
 ```
-                         ┌──────────────────────────────────────────────┐
-                         │           tsqr-gateway (port 5000)          │
-                         │         YARP Reverse Proxy (single entry)   │
-                         └──────┬──────────────────┬───────────────────┘
-                                │                  │
-                    ┌───────────▼────┐    ┌────────▼──────────┐
-                    │   /api/*       │    │   /* (everything) │
-                    │  → tool-lib    │    │   → tsqr-ui       │
-                    └───────────┬────┘    └────────────────────┘
-                                │
-              ┌─────────────────▼──────────────────┐
-              │         tsqr-tool-lib               │
-              │   .NET 9 + Dapper + PostgreSQL      │
-              └─────────────────┬───────────────────┘
-                                │
-                    ┌───────────▼────────────┐
-                    │      postgres:16        │
-                    │   tsqr_tool_library DB  │
-                    └────────────────────────┘
+                              ┌──────────────────────────────────────────────┐
+                              │           tsqr-gateway (port 5000)          │
+                              │     YARP Reverse Proxy (single entry)       │
+                              └──┬──────────┬──────────┬──────────┬────────┘
+                                 │          │          │          │
+                          ┌──────▼──┐  ┌────▼────┐  ┌─▼──────┐  ┌▼──────────┐
+                          │ /api/auth │  │ /api/... │  │ /api/   │  │ /* (SPA)  │
+                          │  autheo   │  │ tool-lib │  │ support │  │  tsqr-ui  │
+                          └──────┬──┘  └────┬────┘  └─┬──────┘  └───────────┘
+                                 │          │          │
+                              ┌──▼──────────▼──────────▼──┐
+                              │      postgres:16           │
+                              │  tsqr_tool_library        │
+                              │  tsqr_autheo              │
+                              │  tsqr_support             │
+                              └───────────────────────────┘
 
-Browser → tsqr-support:4200 (standalone static SPA via nginx)
+  Browser → tsqr-support-ui:4200 (Angular SPA + nginx, proxied to tsqr-support backend)
 ```
 
 | Service | Tech | Host Port | Internal | Description |
 |---------|------|-----------|----------|-------------|
-| `gateway` | .NET 10 + YARP | **5000** | 8080 | **Single entry point** — proxies `/api/*` to tool-lib, `/*` to UI |
+| `gateway` | .NET 10 + YARP | **5000** | 8080 | **Single entry point** — routes to autheo, tool-lib, support, UI |
 | `ui` | Next.js 16 / React 19 | — | 3000 | Main user interface (internal, accessed via gateway) |
-| `tool-lib` | .NET 9 / Dapper / MediatR | — | 8080 | Tool library API (internal, not exposed) |
-| `postgres` | PostgreSQL 16 | 5432 | 5432 | Database (exposed for admin tools only) |
-| `support` | Angular 20 / nginx | **4200** | 80 | Static support portal (standalone access) |
+| `autheo` | .NET 10 / Dapper | — | 8080 | Authentication service — JWT issuance + refresh |
+| `tool-lib` | .NET 10 / Dapper | — | 8080 | Tool library API (internal, not exposed) |
+| `support` | .NET 10 / Dapper | — | 8080 | Support backend — tickets, uptime, contact (internal) |
+| `support-ui` | Angular 20 / nginx | **4200** | 80 | Support portal frontend (standalone, proxies /api to support backend) |
+| `postgres` | PostgreSQL 16 | 5432 | 5432 | Database — 3 databases (exposed for admin tools only) |
 
 ## Request Flow
 
 ```
-Browser → localhost:5000/          → YARP spa → tsqr-ui:3000  → serves HTML page
-Browser → localhost:5000/api/tools → YARP tool-api → tool-lib:8080 → postgres
-  (server-side)                    → ui fetches API_URL=http://gateway:8080/api/...
-Browser → localhost:4200           → tsqr-support:80 → nginx serves static SPA
+Browser → localhost:5000/             → gateway spa → tsqr-ui:3000  → serves HTML
+Browser → localhost:5000/api/auth/*   → gateway → autheo:8080       → tsqr_autheo DB
+Browser → localhost:5000/api/tools    → gateway → tool-lib:8080     → tsqr_tool_library DB
+Browser → localhost:5000/api/bff/*    → gateway BffController (aggregation)
+Browser → localhost:4200              → nginx → tsqr-support-ui SPA
+Browser → localhost:4200/api/*        → nginx proxy → tsqr-support:8080 → tsqr_support DB
 ```
 
 ## Prerequisites
@@ -54,18 +55,34 @@ Browser → localhost:4200           → tsqr-support:80 → nginx serves static
 
 ```bash
 cd tsqr-deploy
-docker compose up --build
+./up.sh        # creates .env from template, builds, starts all services
+```
+
+Or manually:
+
+```bash
+cp .env.example .env   # then edit CHANGE_ME values
+docker compose up --build -d
 ```
 
 ## Access
 
 | URL | What |
 |-----|------|
-| http://localhost:5000 | **Main UI** — full TSQR application (via gateway) |
-| http://localhost:5000/api/tools | Tool library API (via gateway) |
-| http://localhost:5000/api/dashboard/stats | Dashboard stats API (via gateway) |
-| http://localhost:4200 | **Support Portal** — standalone static site |
+| http://localhost:5000 | **Landing page** — public marketing portal |
+| http://localhost:5000/login | Login page (admin@townssquare.local / ChangeMe!123) |
+| http://localhost:5000/portal | **Portal hub** — authenticated tool library management |
+| http://localhost:5000/api/auth/health | Autheo health check |
+| http://localhost:4200 | **Support Portal** — tickets, uptime, contact (standalone) |
 | http://localhost:5432 | PostgreSQL (direct, for admin tools) |
+
+## Default admin account
+
+- Email: `admin@townssquare.local`
+- Password: `ChangeMe!123`
+- Role: `Admin`
+
+**Rotate this password after first login** via the portal's change-password feature.
 
 ## Stopping
 
@@ -80,16 +97,21 @@ docker compose down -v    # stop + delete database data
 docker compose logs -f              # all services
 docker compose logs -f gateway       # specific service
 docker compose logs -f tool-lib
+docker compose logs -f autheo
+docker compose logs -f support
 docker compose logs -f ui
 ```
 
 ## Configuration
 
-Key environment variables (set in `docker-compose.yml`):
+Key environment variables (set in `.env`):
 
 | Variable | Description |
 |----------|-------------|
-| `ConnectionStrings__DefaultConnection` | Tool-lib → PostgreSQL connection |
-| `ASPNETCORE_ENVIRONMENT` | Gateway config profile (set to `Docker`) |
-| `Jwt__Key` | JWT signing key for gateway auth |
-| `API_URL` | Next.js → Gateway URL for server-side API calls |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` | PostgreSQL superuser credentials |
+| `TOOL_LIB_CONNECTION` | tool-lib → PostgreSQL connection string |
+| `AUTHEO_CONNECTION` | autheo → PostgreSQL connection string |
+| `SUPPORT_CONNECTION` | support → PostgreSQL connection string |
+| `JWT_KEY` | Shared JWT signing key — **MUST be identical** across gateway, tool-lib, autheo, support |
+| `API_URL` | Next.js → Gateway URL (internal Docker network) |
+| `NEXT_PUBLIC_SUPPORT_URL` | Support portal URL for the Support tab link in tsqr-ui |

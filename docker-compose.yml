@@ -6,13 +6,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    # Bind to loopback only so the database is reachable from host-based admin
-    # tools but NOT from the wider network. App services reach it over tsqr-net.
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./infra/01-create-dbs.sh:/docker-entrypoint-initdb.d/01-create-dbs.sh:ro
+      - ./infra/02-tool-library.sql:/docker-entrypoint-initdb.d/02-tool-library.sql:ro
+      - ./infra/03-autheo.sql:/docker-entrypoint-initdb.d/03-autheo.sql:ro
+      - ./infra/04-support.sql:/docker-entrypoint-initdb.d/04-support.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
@@ -33,8 +34,59 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${TOOL_LIB_CONNECTION}
-      # Shared symmetric signing key — MUST match the gateway's key.
       Jwt__Key: ${JWT_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/dashboard/stats || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tsqr-net
+
+  autheo:
+    build:
+      context: ../tsqr-autheo
+      dockerfile: Dockerfile
+    container_name: tsqr-autheo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: ${AUTHEO_CONNECTION}
+      Jwt__Key: ${JWT_KEY}
+      ASPNETCORE_ENVIRONMENT: Production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/auth/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tsqr-net
+
+  support:
+    build:
+      context: ../tsqr-support
+      dockerfile: Dockerfile
+    container_name: tsqr-support
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: ${SUPPORT_CONNECTION}
+      Jwt__Key: ${JWT_KEY}
+      ASPNETCORE_ENVIRONMENT: Production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/support/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
     security_opt:
       - no-new-privileges:true
     networks:
@@ -48,8 +100,14 @@ services:
     ports:
       - "5000:8080"
     depends_on:
-      - tool-lib
-      - ui
+      tool-lib:
+        condition: service_healthy
+      autheo:
+        condition: service_healthy
+      support:
+        condition: service_healthy
+      ui:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
       Jwt__Key: ${JWT_KEY}
@@ -64,19 +122,24 @@ services:
       dockerfile: Dockerfile
     container_name: tsqr-ui
     depends_on:
-      - gateway
+      gateway:
+        condition: service_started
     environment:
       API_URL: "http://gateway:8080"
+      NEXT_PUBLIC_SUPPORT_URL: "http://localhost:4200"
     security_opt:
       - no-new-privileges:true
     networks:
       - tsqr-net
 
-  support:
+  support-ui:
     build:
-      context: ../tsqr-support
+      context: ../tsqr-support-ui
       dockerfile: Dockerfile
-    container_name: tsqr-support
+    container_name: tsqr-support-ui
+    depends_on:
+      support:
+        condition: service_healthy
     ports:
       - "4200:80"
     security_opt:

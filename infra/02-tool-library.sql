@@ -1,4 +1,5 @@
 -- TSQR Tool Library - Schema & Seed Data
+\connect tsqr_tool_library
 
 CREATE TABLE IF NOT EXISTS Manufacturers (
     Id SERIAL PRIMARY KEY,
