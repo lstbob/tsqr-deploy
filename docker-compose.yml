@@ -15,6 +15,7 @@ services:
       - ./infra/03-autheo.sql:/docker-entrypoint-initdb.d/03-autheo.sql:ro
       - ./infra/04-support.sql:/docker-entrypoint-initdb.d/04-support.sql:ro
       - ./infra/05-identity.sql:/docker-entrypoint-initdb.d/05-identity.sql:ro
+      - ./infra/06-soup-kitchen.sql:/docker-entrypoint-initdb.d/06-soup-kitchen.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
@@ -140,6 +141,8 @@ services:
         condition: service_healthy
       support:
         condition: service_healthy
+      soup-kitchen:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
       Jwt__Key: ${JWT_KEY}
@@ -158,6 +161,30 @@ services:
     environment:
       API_URL: "http://gateway:8080"
       NEXT_PUBLIC_SUPPORT_URL: "http://localhost:4200"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tsqr-net
+
+  soup-kitchen:
+    build:
+      context: ../tsqr-soup-kitchen
+      dockerfile: Dockerfile
+      additional_contexts:
+        - common=../tsqr-common
+    container_name: tsqr-soup-kitchen
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: ${SOUP_KITCHEN_CONNECTION}
+      Jwt__Key: ${JWT_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
     security_opt:
       - no-new-privileges:true
     networks:

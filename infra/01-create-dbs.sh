@@ -7,7 +7,7 @@ set -e
 
 echo "Creating TSQR databases..."
 
-for db in tsqr_tool_library tsqr_autheo tsqr_support tsqr_identity; do
+for db in tsqr_tool_library tsqr_autheo tsqr_support tsqr_identity tsqr_soup_kitchen; do
   psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
     SELECT 'CREATE DATABASE $db'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db')\gexec
