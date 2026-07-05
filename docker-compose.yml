@@ -16,6 +16,9 @@ services:
       - ./infra/04-support.sql:/docker-entrypoint-initdb.d/04-support.sql:ro
       - ./infra/05-identity.sql:/docker-entrypoint-initdb.d/05-identity.sql:ro
       - ./infra/06-soup-kitchen.sql:/docker-entrypoint-initdb.d/06-soup-kitchen.sql:ro
+      - ./infra/07-communities.sql:/docker-entrypoint-initdb.d/07-communities.sql:ro
+      - ./infra/08-tool-library-community.sql:/docker-entrypoint-initdb.d/08-tool-library-community.sql:ro
+      - ./infra/09-soup-kitchen-community.sql:/docker-entrypoint-initdb.d/09-soup-kitchen-community.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
@@ -143,6 +146,8 @@ services:
         condition: service_healthy
       soup-kitchen:
         condition: service_healthy
+      communities:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
       Jwt__Key: ${JWT_KEY}
@@ -156,6 +161,8 @@ services:
       context: ../tsqr-ui
       dockerfile: Dockerfile
     container_name: tsqr-ui
+    depends_on:
+      - gateway
     ports:
       - "3000:3000"
     environment:
@@ -178,6 +185,30 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${SOUP_KITCHEN_CONNECTION}
+      Jwt__Key: ${JWT_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tsqr-net
+
+  communities:
+    build:
+      context: ../tsqr-communities
+      dockerfile: Dockerfile
+      additional_contexts:
+        - common=../tsqr-common
+    container_name: tsqr-communities
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: ${COMMUNITIES_CONNECTION}
       Jwt__Key: ${JWT_KEY}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]

@@ -1,0 +1,8 @@
+-- Add CommunityId to all soup-kitchen tables
+\connect tsqr_soup_kitchen
+
+ALTER TABLE Events ADD COLUMN CommunityId INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE Meals ADD COLUMN CommunityId INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE Volunteers ADD COLUMN CommunityId INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE Donations ADD COLUMN CommunityId INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE Guests ADD COLUMN CommunityId INTEGER NOT NULL DEFAULT 1;
