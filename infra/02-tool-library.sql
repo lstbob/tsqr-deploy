@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS Tools (
     ManufacturerId INTEGER NOT NULL REFERENCES Manufacturers(Id),
     ToolType INTEGER NOT NULL,
     AmortizationRate INTEGER NOT NULL,
-    Metadata TEXT
+    Metadata TEXT,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS Locations (
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS Members (
     VerificationDate TIMESTAMP,
     MembershipType INTEGER,
     StartDate TIMESTAMP,
-    EndDate TIMESTAMP
+    EndDate TIMESTAMP,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS InventoryItems (
@@ -60,7 +62,8 @@ CREATE TABLE IF NOT EXISTS InventoryItems (
     ReservationMemberId INTEGER REFERENCES Members(Id),
     LoanCount INTEGER NOT NULL DEFAULT 0,
     TotalUsageTimeTicks BIGINT NOT NULL DEFAULT 0,
-    IsUnderRepair BOOLEAN NOT NULL DEFAULT FALSE
+    IsUnderRepair BOOLEAN NOT NULL DEFAULT FALSE,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS Reservations (
@@ -71,7 +74,8 @@ CREATE TABLE IF NOT EXISTS Reservations (
     ExpiryDate TIMESTAMP NOT NULL,
     Status INTEGER NOT NULL,
     IsConfirmed BOOLEAN NOT NULL DEFAULT FALSE,
-    QueuePosition INTEGER NOT NULL DEFAULT 0
+    QueuePosition INTEGER NOT NULL DEFAULT 0,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS MaintenanceRecords (
@@ -86,6 +90,18 @@ CREATE TABLE IF NOT EXISTS MaintenanceRecords (
     ResultingCondition INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS Policies (
+    Id SERIAL PRIMARY KEY,
+    ToolType INTEGER NOT NULL,
+    LocationId INTEGER REFERENCES Locations(Id),
+    Name VARCHAR(200) NOT NULL,
+    Description VARCHAR(1000) NOT NULL,
+    LateFeePerDay NUMERIC(10,2) NOT NULL,
+    MaxLoanDurationDays INTEGER NOT NULL,
+    MaxRenewalCount INTEGER NOT NULL,
+    MaxLoanReservationDays INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS Loans (
     Id SERIAL PRIMARY KEY,
     MemberId INTEGER NOT NULL REFERENCES Members(Id),
@@ -94,8 +110,36 @@ CREATE TABLE IF NOT EXISTS Loans (
     ItemId INTEGER NOT NULL REFERENCES InventoryItems(Id),
     Status INTEGER NOT NULL,
     ReturnedDate TIMESTAMP,
-    FineAccrued NUMERIC(10,2) NOT NULL DEFAULT 0
+    FineAccrued NUMERIC(10,2) NOT NULL DEFAULT 0,
+    LateFeePerDay NUMERIC(10,2) NOT NULL DEFAULT 1.00,
+    RenewalCount INTEGER NOT NULL DEFAULT 0,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS OutboxMessages (
+    EventId UUID PRIMARY KEY,
+    EventType VARCHAR(500) NOT NULL,
+    Payload TEXT NOT NULL,
+    OccurredOn TIMESTAMPTZ NOT NULL,
+    ProcessedOn TIMESTAMPTZ,
+    Attempts INTEGER NOT NULL DEFAULT 0,
+    LastError TEXT,
+    NextAttemptOn TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS IX_OutboxMessages_Pending
+    ON OutboxMessages (NextAttemptOn)
+    WHERE ProcessedOn IS NULL;
+
+-- Seed: Policies (one global policy per ToolType; LocationId IS NULL = global)
+-- (ToolType: 1=HandTool,2=PowerTool,3=GardeningTool,4=ConstructionTool,5=SpecialtyTool,6=Other)
+INSERT INTO Policies (ToolType, LocationId, Name, Description, LateFeePerDay, MaxLoanDurationDays, MaxRenewalCount, MaxLoanReservationDays) VALUES
+    (1, NULL, 'Hand tool policy',       'Default lending policy for hand tools',          0.50, 7, 2, 14),
+    (2, NULL, 'Power tool policy',      'Default lending policy for power tools',         1.50, 5, 1, 10),
+    (3, NULL, 'Gardening tool policy',  'Default lending policy for gardening tools',     0.75, 7, 2, 14),
+    (4, NULL, 'Construction tool policy', 'Default lending policy for construction tools', 0.75, 7, 2, 14),
+    (5, NULL, 'Specialty tool policy', 'Default lending policy for specialty tools',      3.00, 3, 0,  7),
+    (6, NULL, 'Other tool policy',      'Default lending policy for other tools',         0.50, 7, 2, 14);
 
 -- Seed: Manufacturers
 INSERT INTO Manufacturers (Name) VALUES
