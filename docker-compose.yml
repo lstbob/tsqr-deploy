@@ -67,6 +67,9 @@ services:
       ConnectionStrings__DefaultConnection: ${AUTHEO_CONNECTION}
       Jwt__Key: ${JWT_KEY}
       InternalApi__Key: ${INTERNAL_API_KEY}
+      # Local dev only: no SMTP server, so the password-reset token is logged.
+      Email__PasswordResetUrl: http://localhost:3000/portal/reset-password
+      Email__LogResetToken: "true"
       ASPNETCORE_ENVIRONMENT: Production
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/auth/health || exit 1"]

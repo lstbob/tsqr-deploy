@@ -24,11 +24,15 @@ CREATE TABLE IF NOT EXISTS RefreshTokens (
     CreatedByIp         VARCHAR(50),
     RevokedAt           TIMESTAMP NULL,
     RevokedByIp         VARCHAR(50) NULL,
-    ReplacedByTokenHash VARCHAR(128) NULL
+    ReplacedByTokenHash VARCHAR(128) NULL,
+    RevokedReasonIsReuse BOOLEAN NULL
 );
 
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_UserId ON RefreshTokens(UserId);
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_TokenHash ON RefreshTokens(TokenHash);
+
+-- Keep existing databases in sync when this script is re-run manually.
+ALTER TABLE RefreshTokens ADD COLUMN IF NOT EXISTS RevokedReasonIsReuse BOOLEAN NULL;
 
 CREATE TABLE IF NOT EXISTS PasswordResetTokens (
     Id              UUID PRIMARY KEY,
