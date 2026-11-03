@@ -112,6 +112,7 @@ Key environment variables (set in `.env`):
 | `TOOL_LIB_CONNECTION` | tool-lib → PostgreSQL connection string |
 | `AUTHEO_CONNECTION` | autheo → PostgreSQL connection string |
 | `SUPPORT_CONNECTION` | support → PostgreSQL connection string |
-| `JWT_KEY` | Shared JWT signing key — **MUST be identical** across gateway, tool-lib, autheo, support |
+| `JWT_KEY` | Shared JWT signing key — **MUST be identical** across gateway, tool-lib, autheo, identity, support |
+| `INTERNAL_API_KEY` | Shared service-to-service key for identity → autheo email-change calls |
 | `API_URL` | Next.js → Gateway URL (internal Docker network) |
 | `NEXT_PUBLIC_SUPPORT_URL` | Support portal URL for the Support tab link in tsqr-ui |

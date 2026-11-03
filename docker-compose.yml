@@ -66,6 +66,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: ${AUTHEO_CONNECTION}
       Jwt__Key: ${JWT_KEY}
+      InternalApi__Key: ${INTERNAL_API_KEY}
       ASPNETCORE_ENVIRONMENT: Production
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/auth/health || exit 1"]
@@ -91,6 +92,11 @@ services:
     environment:
       ConnectionStrings__IdentityDb: ${IDENTITY_CONNECTION}
       Jwt__Key: ${JWT_KEY}
+      Autheo__BaseUrl: http://autheo:8080
+      Autheo__InternalApiKey: ${INTERNAL_API_KEY}
+      # Local dev only: no SMTP server, so the confirmation token is logged.
+      Email__ConfirmationUrl: http://localhost:3000/portal/profile/confirm-email
+      Email__LogConfirmationToken: "true"
       ASPNETCORE_ENVIRONMENT: Production
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
