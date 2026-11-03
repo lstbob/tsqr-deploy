@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS RefreshTokens (
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_UserId ON RefreshTokens(UserId);
 CREATE INDEX IF NOT EXISTS IX_RefreshTokens_TokenHash ON RefreshTokens(TokenHash);
 
+-- A replacement token may have only one parent. Together with the conditional
+-- parent UPDATE, this prevents concurrent refresh calls from forking a family.
+CREATE UNIQUE INDEX IF NOT EXISTS UX_RefreshTokens_ReplacedByTokenHash
+    ON RefreshTokens(ReplacedByTokenHash)
+    WHERE ReplacedByTokenHash IS NOT NULL;
+
 -- Keep existing databases in sync when this script is re-run manually.
 ALTER TABLE RefreshTokens ADD COLUMN IF NOT EXISTS RevokedReasonIsReuse BOOLEAN NULL;
 
