@@ -24,22 +24,26 @@ CREATE TABLE IF NOT EXISTS Incidents (
     OccurredOn      DATE NOT NULL,
     ServiceName     VARCHAR(200) NOT NULL,
     DurationMinutes INTEGER NOT NULL,
-    Status          INTEGER NOT NULL DEFAULT 3  -- 1=Investigating, 2=Ongoing, 3=Resolved
+    Status          INTEGER NOT NULL DEFAULT 3, -- 1=Investigating, 2=Ongoing, 3=Resolved
+    CommunityId     INTEGER NOT NULL DEFAULT 1  -- soft reference to tsqr_communities
 );
 
 -- Support tickets
 CREATE TABLE IF NOT EXISTS Tickets (
     Id                SERIAL PRIMARY KEY,
     Subject           VARCHAR(500) NOT NULL,
-    Category          INTEGER NOT NULL,          -- 1=BugReport, 2=FeatureRequest, 3=AccessIssue, 4=GeneralInquiry
-    Status            INTEGER NOT NULL DEFAULT 1,-- 1=Open, 2=InProgress, 3=Resolved
+    Category          INTEGER NOT NULL,           -- 1=BugReport, 2=FeatureRequest, 3=AccessIssue, 4=GeneralInquiry
+    Status            INTEGER NOT NULL DEFAULT 1, -- 1=Open, 2=InProgress, 3=Resolved
     SubmitterEmail    VARCHAR(200) NULL,
+    -- Auth user id (JWT sub). Support adopts MemberId == User.Id == Sub until
+    -- tsqr-autheo#6 standardizes the `mbr` claim across services.
     SubmitterMemberId UUID NULL,
     AssignedTo        VARCHAR(200) NULL,
     ReportedAt        TIMESTAMP NOT NULL DEFAULT now(),
     ResolvedAt        TIMESTAMP NULL,
     Description       TEXT NOT NULL,
-    Summary           TEXT NULL
+    Summary           TEXT NULL,
+    CommunityId       INTEGER NOT NULL DEFAULT 1 -- soft reference to tsqr_communities
 );
 
 -- Contact messages (linked to auto-created General Inquiry ticket)

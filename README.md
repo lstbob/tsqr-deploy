@@ -96,7 +96,8 @@ docker compose exec -T postgres sh -c '
     /docker-entrypoint-initdb.d/08-tool-library-community.sql \
     /docker-entrypoint-initdb.d/10-tool-library-loans-latefee.sql \
     /docker-entrypoint-initdb.d/11-tool-library-policies.sql \
-    /docker-entrypoint-initdb.d/12-tool-library-outbox.sql; do
+    /docker-entrypoint-initdb.d/12-tool-library-outbox.sql \
+    /docker-entrypoint-initdb.d/13-support-community.sql; do
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
   done
 '
