@@ -3,7 +3,8 @@
 
 CREATE TABLE IF NOT EXISTS Manufacturers (
     Id SERIAL PRIMARY KEY,
-    Name VARCHAR(200) NOT NULL
+    Name VARCHAR(200) NOT NULL,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS Tools (
@@ -58,8 +59,6 @@ CREATE TABLE IF NOT EXISTS InventoryItems (
     Condition INTEGER NOT NULL,
     CurrentHolderId INTEGER REFERENCES Members(Id),
     LastBorrowedDate TIMESTAMP,
-    ReservationDate TIMESTAMP,
-    ReservationMemberId INTEGER REFERENCES Members(Id),
     LoanCount INTEGER NOT NULL DEFAULT 0,
     TotalUsageTimeTicks BIGINT NOT NULL DEFAULT 0,
     IsUnderRepair BOOLEAN NOT NULL DEFAULT FALSE,
@@ -87,12 +86,16 @@ CREATE TABLE IF NOT EXISTS MaintenanceRecords (
     Status INTEGER NOT NULL,
     CompletedById INTEGER REFERENCES Members(Id),
     CompletedDate TIMESTAMP,
-    ResultingCondition INTEGER
+    ResultingCondition INTEGER,
+    CommunityId INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS Policies (
     Id SERIAL PRIMARY KEY,
     ToolType INTEGER NOT NULL,
+    -- NULL = global policy for the tool type; non-NULL = location-specific override.
+    -- Lookup fallback: (ToolType, LocationId) exact match wins, else the
+    -- (ToolType, LocationId IS NULL) global one.
     LocationId INTEGER REFERENCES Locations(Id),
     Name VARCHAR(200) NOT NULL,
     Description VARCHAR(1000) NOT NULL,
@@ -214,22 +217,22 @@ INSERT INTO Members (FirstName, MiddleName, LastName, Age, Address, Email, Phone
     ('Amanda', 'Rose', 'Martinez', 29, '482 Hickory Way, Springfield, IL', 'amanda.m@email.com', '555-0110', 1, FALSE, NULL, NULL, 1, '2024-07-01', NULL);
 
 -- Seed: InventoryItems
-INSERT INTO InventoryItems (ToolId, OriginalOwnerId, InitialAcquisitionDate, SerialNumber, Status, Condition, CurrentHolderId, LastBorrowedDate, ReservationDate, ReservationMemberId, LoanCount, TotalUsageTimeTicks, IsUnderRepair) VALUES
-    (1, 2, '2024-01-15 09:00:00', 'DW-HAM-001', 3, 2, 2, '2024-11-20 10:00:00', NULL, NULL, 8, 864000000000, FALSE),
-    (3, 2, '2024-01-15 09:00:00', 'DW-DRL-001', 1, 1, NULL, NULL, NULL, NULL, 3, 144000000000, FALSE),
-    (3, 3, '2024-02-01 10:00:00', 'DW-DRL-002', 4, 3, NULL, NULL, NULL, NULL, 5, 432000000000, TRUE),
-    (4, 4, '2024-03-01 11:00:00', 'MK-SAW-001', 3, 2, 4, '2024-12-01 09:00:00', NULL, NULL, 2, 720000000000, FALSE),
-    (5, 5, '2024-01-20 08:00:00', 'ST-SHV-001', 1, 2, NULL, NULL, NULL, NULL, 12, 864000000000, FALSE),
-    (7, 2, '2024-04-01 14:00:00', 'BS-LVL-001', 2, 1, NULL, NULL, '2024-12-15 09:00:00', 6, 0, 0, FALSE),
-    (9, 8, '2024-05-01 09:00:00', 'ML-PW-001', 1, 1, NULL, NULL, NULL, NULL, 0, 0, FALSE),
-    (10, 3, '2024-02-15 10:00:00', 'DW-WLD-001', 4, 2, NULL, NULL, NULL, NULL, 1, 288000000000, TRUE),
-    (13, 4, '2024-06-01 11:00:00', 'MK-GRND-001', 1, 2, NULL, NULL, NULL, NULL, 4, 216000000000, FALSE),
-    (14, 8, '2024-07-01 13:00:00', 'BS-HEDGE-001', 3, 1, 8, '2024-12-05 08:00:00', NULL, NULL, 1, 720000000000, FALSE),
-    (17, 2, '2024-08-01 09:00:00', 'BS-JIG-001', 1, 1, NULL, NULL, NULL, NULL, 0, 0, FALSE),
-    (19, 5, '2024-03-15 08:00:00', 'ST-WB-001', 1, 2, NULL, NULL, NULL, NULL, 10, 0, FALSE),
-    (20, 5, '2024-09-01 10:00:00', 'DW-GEN-001', 1, 1, NULL, NULL, NULL, NULL, 0, 0, FALSE),
-    (2, 10, '2024-10-01 09:00:00', 'ST-SCR-001', 1, 1, NULL, NULL, NULL, NULL, 0, 0, FALSE),
-    (6, 10, '2024-10-01 09:00:00', 'ST-RAKE-001', 1, 1, NULL, NULL, NULL, NULL, 0, 0, FALSE);
+INSERT INTO InventoryItems (ToolId, OriginalOwnerId, InitialAcquisitionDate, SerialNumber, Status, Condition, CurrentHolderId, LastBorrowedDate, LoanCount, TotalUsageTimeTicks, IsUnderRepair) VALUES
+    (1, 2, '2024-01-15 09:00:00', 'DW-HAM-001', 3, 2, 2, '2024-11-20 10:00:00', 8, 864000000000, FALSE),
+    (3, 2, '2024-01-15 09:00:00', 'DW-DRL-001', 1, 1, NULL, NULL, 3, 144000000000, FALSE),
+    (3, 3, '2024-02-01 10:00:00', 'DW-DRL-002', 4, 3, NULL, NULL, 5, 432000000000, TRUE),
+    (4, 4, '2024-03-01 11:00:00', 'MK-SAW-001', 3, 2, 4, '2024-12-01 09:00:00', 2, 720000000000, FALSE),
+    (5, 5, '2024-01-20 08:00:00', 'ST-SHV-001', 1, 2, NULL, NULL, 12, 864000000000, FALSE),
+    (7, 2, '2024-04-01 14:00:00', 'BS-LVL-001', 2, 1, NULL, NULL, 0, 0, FALSE),
+    (9, 8, '2024-05-01 09:00:00', 'ML-PW-001', 1, 1, NULL, NULL, 0, 0, FALSE),
+    (10, 3, '2024-02-15 10:00:00', 'DW-WLD-001', 4, 2, NULL, NULL, 1, 288000000000, TRUE),
+    (13, 4, '2024-06-01 11:00:00', 'MK-GRND-001', 1, 2, NULL, NULL, 4, 216000000000, FALSE),
+    (14, 8, '2024-07-01 13:00:00', 'BS-HEDGE-001', 3, 1, 8, '2024-12-05 08:00:00', 1, 720000000000, FALSE),
+    (17, 2, '2024-08-01 09:00:00', 'BS-JIG-001', 1, 1, NULL, NULL, 0, 0, FALSE),
+    (19, 5, '2024-03-15 08:00:00', 'ST-WB-001', 1, 2, NULL, NULL, 10, 0, FALSE),
+    (20, 5, '2024-09-01 10:00:00', 'DW-GEN-001', 1, 1, NULL, NULL, 0, 0, FALSE),
+    (2, 10, '2024-10-01 09:00:00', 'ST-SCR-001', 1, 1, NULL, NULL, 0, 0, FALSE),
+    (6, 10, '2024-10-01 09:00:00', 'ST-RAKE-001', 1, 1, NULL, NULL, 0, 0, FALSE);
 
 -- Seed: Reservations
 INSERT INTO Reservations (ItemId, MemberId, ReservationDate, ExpiryDate, Status, IsConfirmed, QueuePosition) VALUES

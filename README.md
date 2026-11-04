@@ -84,6 +84,27 @@ docker compose up --build -d
 
 **Rotate this password after first login** via the portal's change-password feature.
 
+## Upgrading an existing database volume
+
+The files in `infra/` are PostgreSQL init scripts: they run only when the
+`pgdata` volume is first created. If you already have a volume from an older
+checkout, apply the idempotent retrofit scripts after `docker compose up`:
+
+```bash
+docker compose exec -T postgres sh -c '
+  for f in \
+    /docker-entrypoint-initdb.d/08-tool-library-community.sql \
+    /docker-entrypoint-initdb.d/10-tool-library-loans-latefee.sql \
+    /docker-entrypoint-initdb.d/11-tool-library-policies.sql \
+    /docker-entrypoint-initdb.d/12-tool-library-outbox.sql; do
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
+  done
+'
+```
+
+These scripts only add missing columns/tables and seed missing default
+policies; they never drop data and can be run more than once.
+
 ## Stopping
 
 ```bash

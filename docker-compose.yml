@@ -19,6 +19,9 @@ services:
       - ./infra/07-communities.sql:/docker-entrypoint-initdb.d/07-communities.sql:ro
       - ./infra/08-tool-library-community.sql:/docker-entrypoint-initdb.d/08-tool-library-community.sql:ro
       - ./infra/09-soup-kitchen-community.sql:/docker-entrypoint-initdb.d/09-soup-kitchen-community.sql:ro
+      - ./infra/10-tool-library-loans-latefee.sql:/docker-entrypoint-initdb.d/10-tool-library-loans-latefee.sql:ro
+      - ./infra/11-tool-library-policies.sql:/docker-entrypoint-initdb.d/11-tool-library-policies.sql:ro
+      - ./infra/12-tool-library-outbox.sql:/docker-entrypoint-initdb.d/12-tool-library-outbox.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
