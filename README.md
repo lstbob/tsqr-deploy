@@ -97,14 +97,16 @@ docker compose exec -T postgres sh -c '
     /docker-entrypoint-initdb.d/10-tool-library-loans-latefee.sql \
     /docker-entrypoint-initdb.d/11-tool-library-policies.sql \
     /docker-entrypoint-initdb.d/12-tool-library-outbox.sql \
-    /docker-entrypoint-initdb.d/13-support-community.sql; do
+    /docker-entrypoint-initdb.d/13-support-community.sql \
+    /docker-entrypoint-initdb.d/14-communities-hardening.sql; do
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
   done
 '
 ```
 
-These scripts only add missing columns/tables and seed missing default
-policies; they never drop data and can be run more than once.
+These scripts only add missing columns, indexes, constraints and tables and
+seed missing default policies; they never drop data and can be run more than
+once.
 
 ## Stopping
 
