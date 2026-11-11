@@ -24,6 +24,7 @@ services:
       - ./infra/12-tool-library-outbox.sql:/docker-entrypoint-initdb.d/12-tool-library-outbox.sql:ro
       - ./infra/13-support-community.sql:/docker-entrypoint-initdb.d/13-support-community.sql:ro
       - ./infra/14-communities-hardening.sql:/docker-entrypoint-initdb.d/14-communities-hardening.sql:ro
+      - ./infra/15-identity-audit.sql:/docker-entrypoint-initdb.d/15-identity-audit.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s

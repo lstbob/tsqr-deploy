@@ -9,7 +9,11 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     Bio         TEXT NULL,
     CreatedAt   TIMESTAMP NOT NULL DEFAULT now(),
     UpdatedAt   TIMESTAMP NOT NULL DEFAULT now(),
-    LockoutEnd  TIMESTAMP NULL
+    LockoutEnd  TIMESTAMP NULL,
+    CreatedBy   VARCHAR(200) NULL,
+    UpdatedBy   VARCHAR(200) NULL,
+    LockedBy    VARCHAR(200) NULL,
+    LockReason  VARCHAR(500) NULL
 );
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -19,8 +23,10 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 CREATE TABLE IF NOT EXISTS user_roles (
-    UserId  VARCHAR(128) NOT NULL REFERENCES user_profiles(Id),
-    RoleId  VARCHAR(128) NOT NULL REFERENCES roles(Id),
+    UserId      VARCHAR(128) NOT NULL REFERENCES user_profiles(Id),
+    RoleId      VARCHAR(128) NOT NULL REFERENCES roles(Id),
+    AssignedAt  TIMESTAMP NOT NULL DEFAULT now(),
+    AssignedBy  VARCHAR(200) NULL,
     PRIMARY KEY (UserId, RoleId)
 );
 
