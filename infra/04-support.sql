@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS Tickets (
     Id                SERIAL PRIMARY KEY,
     Subject           VARCHAR(500) NOT NULL,
     Category          INTEGER NOT NULL,           -- 1=BugReport, 2=FeatureRequest, 3=AccessIssue, 4=GeneralInquiry
-    Status            INTEGER NOT NULL DEFAULT 1, -- 1=Open, 2=InProgress, 3=Resolved
+    Priority          INTEGER NOT NULL DEFAULT 2, -- 1=Low, 2=Normal, 3=High, 4=Urgent
+    Status            INTEGER NOT NULL DEFAULT 1, -- 1=Open, 2=InProgress, 3=Resolved, 4=Closed
     SubmitterEmail    VARCHAR(200) NULL,
     -- Auth user id (JWT sub). Support adopts MemberId == User.Id == Sub until
     -- tsqr-autheo#6 standardizes the `mbr` claim across services.
@@ -115,13 +116,13 @@ INSERT INTO AboutContent (Key, Value) VALUES
     ('platform', 'Built with .NET 10, Dapper, and Postgres on the backend, with a modern Angular and Next.js frontend. The platform follows Domain-Driven Design principles with a focus on maintainability and performance.')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO Tickets (Subject, Category, Status, SubmitterEmail, AssignedTo, ReportedAt, ResolvedAt, Description, Summary) VALUES
-    ('Login failure on Member portal', 3, 1, 'user@example.com', 'Infrastructure Team', '2026-06-07 09:00:00', NULL,
+INSERT INTO Tickets (Subject, Category, Priority, Status, SubmitterEmail, AssignedTo, ReportedAt, ResolvedAt, Description, Summary) VALUES
+    ('Login failure on Member portal', 3, 4, 1, 'user@example.com', 'Infrastructure Team', '2026-06-07 09:00:00', NULL,
      'Cannot log in with valid credentials since this morning.', 'Reported Jun 7 — Assigned to infrastructure team'),
-    ('Add export to CSV feature', 2, 2, 'manager@example.com', 'Product Team', '2026-06-04 14:00:00', NULL,
+    ('Add export to CSV feature', 2, 2, 2, 'manager@example.com', 'Product Team', '2026-06-04 14:00:00', NULL,
      'It would be very useful to be able to export the tool catalog to CSV.', 'Reported Jun 4 — Estimated completion Jun 14'),
-    ('Reservation expiry not sending emails', 1, 3, 'admin@example.com', 'Backend Team', '2026-06-02 10:00:00', '2026-06-03 15:00:00',
+    ('Reservation expiry not sending emails', 1, 3, 3, 'admin@example.com', 'Backend Team', '2026-06-02 10:00:00', '2026-06-03 15:00:00',
      'Reservations that expire do not trigger the reminder email to the member.', 'Reported Jun 2 — Resolved Jun 3'),
-    ('Tool image upload fails for large files', 1, 3, 'coordinator@example.com', 'Frontend Team', '2026-05-28 11:00:00', '2026-05-30 09:00:00',
+    ('Tool image upload fails for large files', 1, 1, 3, 'coordinator@example.com', 'Frontend Team', '2026-05-28 11:00:00', '2026-05-30 09:00:00',
      'Uploading images larger than 5MB returns a 500 error.', 'Reported May 28 — Resolved May 30')
 ON CONFLICT DO NOTHING;

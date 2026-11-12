@@ -98,7 +98,10 @@ docker compose exec -T postgres sh -c '
     /docker-entrypoint-initdb.d/11-tool-library-policies.sql \
     /docker-entrypoint-initdb.d/12-tool-library-outbox.sql \
     /docker-entrypoint-initdb.d/13-support-community.sql \
-    /docker-entrypoint-initdb.d/14-communities-hardening.sql; do
+    /docker-entrypoint-initdb.d/14-communities-hardening.sql \
+    /docker-entrypoint-initdb.d/15-identity-audit.sql \
+    /docker-entrypoint-initdb.d/16-support-incidents.sql \
+    /docker-entrypoint-initdb.d/17-support-tickets.sql; do
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
   done
 '
