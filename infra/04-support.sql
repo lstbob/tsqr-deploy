@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS Incidents (
     ServiceName     VARCHAR(200) NOT NULL,
     DurationMinutes INTEGER NOT NULL,
     Status          INTEGER NOT NULL DEFAULT 3, -- 1=Investigating, 2=Ongoing, 3=Resolved
+    Description     TEXT NOT NULL DEFAULT '',
+    AssignedTeam    VARCHAR(200) NOT NULL DEFAULT 'Unassigned',
+    Findings        TEXT NULL,
+    ResolvedAt      TIMESTAMP NULL,
     CommunityId     INTEGER NOT NULL DEFAULT 1  -- soft reference to tsqr_communities
 );
 
@@ -94,10 +98,10 @@ INSERT INTO ServiceStatuses (Name, State, UptimePercent30d, Summary) VALUES
     ('Postgres Database', 1, 99.99, NULL)
 ON CONFLICT DO NOTHING;
 
-INSERT INTO Incidents (OccurredOn, ServiceName, DurationMinutes, Status) VALUES
-    ('2026-06-05', 'Notification Service', 134, 3),
-    ('2026-06-01', 'Reservation Service', 45, 3),
-    ('2026-05-28', 'Member Service', 62, 3)
+INSERT INTO Incidents (OccurredOn, ServiceName, DurationMinutes, Status, Description, AssignedTeam, ResolvedAt) VALUES
+    ('2026-06-05', 'Notification Service', 134, 3, 'Legacy incident for Notification Service', 'Unassigned', '2026-06-05 02:14:00'),
+    ('2026-06-01', 'Reservation Service', 45, 3, 'Legacy incident for Reservation Service', 'Unassigned', '2026-06-01 00:45:00'),
+    ('2026-05-28', 'Member Service', 62, 3, 'Legacy incident for Member Service', 'Unassigned', '2026-05-28 01:02:00')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO TeamMembers (Initials, Name, RoleName) VALUES
