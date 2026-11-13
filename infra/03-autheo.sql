@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS Users (
     PasswordHash    TEXT NOT NULL,
     FullName        VARCHAR(300) NOT NULL,
     RoleName        VARCHAR(50)  NOT NULL,
-    MemberId        UUID NULL,
     IsActive        BOOLEAN NOT NULL DEFAULT TRUE,
     IsEmailConfirmed BOOLEAN NOT NULL DEFAULT TRUE,
     CreatedAt       TIMESTAMP NOT NULL DEFAULT now(),
@@ -57,12 +56,11 @@ CREATE INDEX IF NOT EXISTS IX_PasswordResetTokens_UserId ON PasswordResetTokens(
 -- Format: "{iterations}.{salt-base64}.{hash-base64}". Regenerate via autheo's
 -- IPasswordHasher.Hash if you want to rotate. The default is intentionally
 -- documented here so first-boot login is possible.
-INSERT INTO Users (Id, Email, PasswordHash, FullName, RoleName, MemberId, IsActive, IsEmailConfirmed, CreatedAt, UpdatedAt, LastLoginAt) VALUES
+INSERT INTO Users (Id, Email, PasswordHash, FullName, RoleName, IsActive, IsEmailConfirmed, CreatedAt, UpdatedAt, LastLoginAt) VALUES
     ('11111111-1111-1111-1111-111111111111',
      'admin@townssquare.local',
      '100000.hCQNMKy8aIzNgAxbSJf7qg==.TEvPJnH5wCOZD4ICfOPPCLfbmTl+ND4vGYNGMLf1OsU=',
      'Platform Administrator',
      'Admin',
-     NULL,
      TRUE, TRUE, now(), now(), NULL)
 ON CONFLICT (Email) DO NOTHING;
