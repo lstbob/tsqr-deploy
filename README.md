@@ -65,6 +65,20 @@ cp .env.example .env   # then edit CHANGE_ME values
 docker compose up --build -d
 ```
 
+## CI
+
+Each repository has a small `.github/workflows/ci.yml` caller that invokes one
+of the reusable workflows in this repository:
+
+- `dotnet-ci.yml` — restores, builds, and tests a .NET solution, packs
+  `TSQR.Common` locally, and optionally builds/pushes a Docker image.
+- `node-ci.yml` — installs, optionally lints/tests, builds a Node app, and
+  optionally builds/pushes a Docker image.
+- `ci.yml` — validates this repository's Docker Compose configuration.
+
+Images are built on pull requests and pushed to GHCR only on pushes to `main`
+for services that opt in with `push-image: true`.
+
 ## Access
 
 | URL | What |

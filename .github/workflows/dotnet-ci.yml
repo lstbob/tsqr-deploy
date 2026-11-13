@@ -1,0 +1,95 @@
+name: .NET CI
+
+on:
+  workflow_call:
+    inputs:
+      solution:
+        description: Solution or project to restore, build, and test.
+        required: true
+        type: string
+      dockerfile:
+        description: Optional Dockerfile to validate.
+        required: false
+        type: string
+        default: ""
+      push-image:
+        description: Push the image to GHCR on main. PR builds only build the image.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out service
+        uses: actions/checkout@v4
+
+      - name: Check out TSQR.Common
+        uses: actions/checkout@v4
+        with:
+          repository: lstbob/tsqr-common
+          path: .tsqr-common
+
+      # Identity uses project references that expect tsqr-common as a sibling
+      # repository. The other services use the packaged TSQR.Common, but the
+      # symlink is harmless for them.
+      - name: Link TSQR.Common for project references
+        run: ln -s "$GITHUB_WORKSPACE/.tsqr-common" "$GITHUB_WORKSPACE/../tsqr-common"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Pack both versions currently referenced by the services. This avoids
+      # requiring a GitHub Packages token in CI and keeps builds reproducible.
+      - name: Pack TSQR.Common locally
+        run: |
+          mkdir -p "$RUNNER_TEMP/tsqr-nupkg"
+          dotnet pack .tsqr-common/src/TSQR.Common/TSQR.Common.csproj \
+            -c Release -p:PackageVersion=1.0.0 -o "$RUNNER_TEMP/tsqr-nupkg"
+          dotnet pack .tsqr-common/src/TSQR.Common/TSQR.Common.csproj \
+            -c Release -p:PackageVersion=1.1.0 -o "$RUNNER_TEMP/tsqr-nupkg"
+
+      - name: Prefer the locally packed TSQR.Common
+        run: |
+          dotnet nuget remove source github-lstbob || true
+          dotnet nuget add source "$RUNNER_TEMP/tsqr-nupkg" --name tsqr-local
+
+      - name: Restore
+        run: dotnet restore "${{ inputs.solution }}"
+
+      - name: Build
+        run: dotnet build "${{ inputs.solution }}" -c Release --no-restore
+
+      - name: Test
+        run: dotnet test "${{ inputs.solution }}" -c Release --no-build --no-restore
+
+      - name: Build Docker image
+        if: inputs.dockerfile != ''
+        run: |
+          docker build \
+            --file "${{ inputs.dockerfile }}" \
+            --build-context common="$GITHUB_WORKSPACE/.tsqr-common" \
+            --tag "ghcr.io/${{ github.repository }}:${GITHUB_SHA}" \
+            --tag "ghcr.io/${{ github.repository }}:main" \
+            .
+
+      - name: Log in to GHCR
+        if: inputs.push-image && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        if: inputs.push-image && inputs.dockerfile != '' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push "ghcr.io/${{ github.repository }}:${GITHUB_SHA}"
+          docker push "ghcr.io/${{ github.repository }}:main"
