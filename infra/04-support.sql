@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS Tickets (
     Priority          INTEGER NOT NULL DEFAULT 2, -- 1=Low, 2=Normal, 3=High, 4=Urgent
     Status            INTEGER NOT NULL DEFAULT 1, -- 1=Open, 2=InProgress, 3=Resolved, 4=Closed
     SubmitterEmail    VARCHAR(200) NULL,
-    -- Auth user id (JWT sub). Support adopts MemberId == User.Id == Sub until
-    -- tsqr-autheo#6 standardizes the `mbr` claim across services.
+    -- Auth user id (JWT sub). Cross-service identity is
+    -- MemberId == User.Id == Sub; the `mbr` claim is retired.
     SubmitterMemberId UUID NULL,
     AssignedTo        VARCHAR(200) NULL,
     ReportedAt        TIMESTAMP NOT NULL DEFAULT now(),
