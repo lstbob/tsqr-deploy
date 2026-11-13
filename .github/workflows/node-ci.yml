@@ -1,0 +1,79 @@
+name: Node CI
+
+on:
+  workflow_call:
+    inputs:
+      lint:
+        description: Run the lint script.
+        required: false
+        type: boolean
+        default: false
+      test:
+        description: Run the test script with CI flags.
+        required: false
+        type: boolean
+        default: false
+      dockerfile:
+        description: Optional Dockerfile to validate.
+        required: false
+        type: string
+        default: ""
+      push-image:
+        description: Push the image to GHCR on main. PR builds only build the image.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out service
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        if: inputs.lint
+        run: npm run lint
+
+      - name: Test
+        if: inputs.test
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build
+        run: npm run build
+
+      - name: Build Docker image
+        if: inputs.dockerfile != ''
+        run: |
+          docker build \
+            --file "${{ inputs.dockerfile }}" \
+            --tag "ghcr.io/${{ github.repository }}:${GITHUB_SHA}" \
+            --tag "ghcr.io/${{ github.repository }}:main" \
+            .
+
+      - name: Log in to GHCR
+        if: inputs.push-image && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        if: inputs.push-image && inputs.dockerfile != '' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push "ghcr.io/${{ github.repository }}:${GITHUB_SHA}"
+          docker push "ghcr.io/${{ github.repository }}:main"
