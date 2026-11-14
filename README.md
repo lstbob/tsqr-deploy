@@ -76,8 +76,8 @@ of the reusable workflows in this repository:
   optionally builds/pushes a Docker image.
 - `ci.yml` — validates this repository's Docker Compose configuration.
 
-Images are built on pull requests and pushed to GHCR only on pushes to `main`
-for services that opt in with `push-image: true`.
+Images are built on pull requests and pushed to GHCR only on pushes to each
+repository's default branch for services that opt in with `push-image: true`.
 
 ## Access
 
