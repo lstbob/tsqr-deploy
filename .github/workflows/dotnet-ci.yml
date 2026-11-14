@@ -46,15 +46,15 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      # Pack both versions currently referenced by the services. This avoids
+      # Pack the shared packages referenced by the services. This avoids
       # requiring a GitHub Packages token in CI and keeps builds reproducible.
-      - name: Pack TSQR.Common locally
+      - name: Pack TSQR.Common packages locally
         run: |
           mkdir -p "$RUNNER_TEMP/tsqr-nupkg"
           dotnet pack .tsqr-common/src/TSQR.Common/TSQR.Common.csproj \
-            -c Release -p:PackageVersion=1.0.0 -o "$RUNNER_TEMP/tsqr-nupkg"
-          dotnet pack .tsqr-common/src/TSQR.Common/TSQR.Common.csproj \
-            -c Release -p:PackageVersion=1.1.0 -o "$RUNNER_TEMP/tsqr-nupkg"
+            -c Release -o "$RUNNER_TEMP/tsqr-nupkg"
+          dotnet pack .tsqr-common/src/TSQR.Common.WebApi/TSQR.Common.WebApi.csproj \
+            -c Release -o "$RUNNER_TEMP/tsqr-nupkg"
 
       # Use a temporary config instead of mutating the repository nuget.config.
       # The repository config is copied into the Docker build, so host-only
