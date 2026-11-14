@@ -56,13 +56,23 @@ jobs:
           dotnet pack .tsqr-common/src/TSQR.Common/TSQR.Common.csproj \
             -c Release -p:PackageVersion=1.1.0 -o "$RUNNER_TEMP/tsqr-nupkg"
 
-      - name: Prefer the locally packed TSQR.Common
+      # Use a temporary config instead of mutating the repository nuget.config.
+      # The repository config is copied into the Docker build, so host-only
+      # sources such as $RUNNER_TEMP must not leak into it.
+      - name: Create local NuGet config
         run: |
-          dotnet nuget remove source github-lstbob || true
-          dotnet nuget add source "$RUNNER_TEMP/tsqr-nupkg" --name tsqr-local
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="utf-8"?>' \
+            '<configuration>' \
+            '  <packageSources>' \
+            '    <clear />' \
+            '    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />' \
+            "    <add key=\"tsqr-local\" value=\"$RUNNER_TEMP/tsqr-nupkg\" />" \
+            '  </packageSources>' \
+            '</configuration>' > "$RUNNER_TEMP/tsqr-nuget.config"
 
       - name: Restore
-        run: dotnet restore "${{ inputs.solution }}"
+        run: dotnet restore "${{ inputs.solution }}" --configfile "$RUNNER_TEMP/tsqr-nuget.config"
 
       - name: Build
         run: dotnet build "${{ inputs.solution }}" -c Release --no-restore
