@@ -17,7 +17,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1
         FROM pg_constraint
-        WHERE conname = 'CK_Communities_Status'
+        WHERE LOWER(conname) = 'ck_communities_status'
           AND conrelid = 'Communities'::regclass
     ) THEN
         ALTER TABLE Communities
@@ -25,9 +25,29 @@ BEGIN
     END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS IX_Countries_Name_Active
-    ON Countries (Name) WHERE DeletedAt IS NULL;
-CREATE INDEX IF NOT EXISTS IX_Countries_NameLower_Active
+-- Country codes are ISO 3166-1 alpha-2 values and country names are unique
+-- among active rows. Existing databases may contain legacy three-letter codes
+-- from quick registration, so the CHECK is added NOT VALID: it applies to new
+-- and updated rows immediately without blocking startup. After correcting the
+-- legacy rows, promote it with:
+--   ALTER TABLE Countries VALIDATE CONSTRAINT CK_Countries_Code_Format;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE LOWER(conname) = 'ck_countries_code_format'
+          AND conrelid = 'Countries'::regclass
+    ) THEN
+        ALTER TABLE Countries
+            ADD CONSTRAINT CK_Countries_Code_Format
+            CHECK (Code ~ '^[A-Z]{2}$') NOT VALID;
+    END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Countries_Code_Active
+    ON Countries (Code) WHERE DeletedAt IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Countries_NameLower_Active
     ON Countries (LOWER(Name)) WHERE DeletedAt IS NULL;
 CREATE INDEX IF NOT EXISTS IX_Cities_CountryId_Name_Active
     ON Cities (CountryId, Name) WHERE DeletedAt IS NULL;
