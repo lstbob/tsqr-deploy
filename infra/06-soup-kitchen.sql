@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS Volunteers (
     Notes TEXT
 );
 
+-- Prevent duplicate active volunteer sign-ups for the same event and member.
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Volunteers_EventId_MemberId
+    ON Volunteers (EventId, MemberId)
+    WHERE Status <> 3;
+
 CREATE TABLE IF NOT EXISTS Donations (
     Id SERIAL PRIMARY KEY,
     EventId INTEGER NOT NULL REFERENCES Events(Id),
