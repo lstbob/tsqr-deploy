@@ -4,7 +4,8 @@
 CREATE TABLE IF NOT EXISTS Countries (
     Id SERIAL PRIMARY KEY,
     Name VARCHAR(200) NOT NULL,
-    Code VARCHAR(3) NOT NULL,
+    Code VARCHAR(2) NOT NULL
+        CONSTRAINT CK_Countries_Code_Format CHECK (Code ~ '^[A-Z]{2}$'),
     DeletedAt TIMESTAMP,
     DeletedBy VARCHAR(200)
 );
@@ -39,9 +40,9 @@ CREATE TABLE IF NOT EXISTS Communities (
     DeletedBy VARCHAR(200)
 );
 
-CREATE INDEX IF NOT EXISTS IX_Countries_Name_Active
-    ON Countries (Name) WHERE DeletedAt IS NULL;
-CREATE INDEX IF NOT EXISTS IX_Countries_NameLower_Active
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Countries_Code_Active
+    ON Countries (Code) WHERE DeletedAt IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Countries_NameLower_Active
     ON Countries (LOWER(Name)) WHERE DeletedAt IS NULL;
 CREATE INDEX IF NOT EXISTS IX_Cities_CountryId_Name_Active
     ON Cities (CountryId, Name) WHERE DeletedAt IS NULL;
