@@ -30,6 +30,7 @@ services:
       - ./infra/18-identity-schema-hardening.sql:/docker-entrypoint-initdb.d/18-identity-schema-hardening.sql:ro
       - ./infra/19-autheo-drop-memberid.sql:/docker-entrypoint-initdb.d/19-autheo-drop-memberid.sql:ro
       - ./infra/20-tool-library-schema-hardening.sql:/docker-entrypoint-initdb.d/20-tool-library-schema-hardening.sql:ro
+      - ./infra/21-soup-kitchen-volunteer-unique.sql:/docker-entrypoint-initdb.d/21-soup-kitchen-volunteer-unique.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
