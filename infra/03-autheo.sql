@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS Users (
     IsEmailConfirmed BOOLEAN NOT NULL DEFAULT TRUE,
     CreatedAt       TIMESTAMP NOT NULL DEFAULT now(),
     UpdatedAt       TIMESTAMP NOT NULL DEFAULT now(),
-    LastLoginAt     TIMESTAMP NULL
+    LastLoginAt     TIMESTAMP NULL,
+    CONSTRAINT CK_Users_RoleName CHECK (RoleName IN ('Regular', 'Repairman', 'LocationCoordinator', 'Admin'))
 );
 
 CREATE TABLE IF NOT EXISTS RefreshTokens (
