@@ -33,6 +33,7 @@ services:
       - ./infra/21-soup-kitchen-volunteer-unique.sql:/docker-entrypoint-initdb.d/21-soup-kitchen-volunteer-unique.sql:ro
       - ./infra/22-autheo-schema-hardening.sql:/docker-entrypoint-initdb.d/22-autheo-schema-hardening.sql:ro
       - ./infra/23-soup-kitchen-schema-hardening.sql:/docker-entrypoint-initdb.d/23-soup-kitchen-schema-hardening.sql:ro
+      - ./infra/24-communities-slug-unique.sql:/docker-entrypoint-initdb.d/24-communities-slug-unique.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s

@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS Communities (
     DeletedBy VARCHAR(200)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Communities_Slug_Active
+    ON Communities (Slug) WHERE DeletedAt IS NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS UX_Countries_Code_Active
     ON Countries (Code) WHERE DeletedAt IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS UX_Countries_NameLower_Active
