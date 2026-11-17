@@ -121,7 +121,8 @@ docker compose exec -T postgres sh -c '
     /docker-entrypoint-initdb.d/21-soup-kitchen-volunteer-unique.sql \
     /docker-entrypoint-initdb.d/22-autheo-schema-hardening.sql \
     /docker-entrypoint-initdb.d/23-soup-kitchen-schema-hardening.sql \
-    /docker-entrypoint-initdb.d/24-communities-slug-unique.sql; do
+    /docker-entrypoint-initdb.d/24-communities-slug-unique.sql \
+    /docker-entrypoint-initdb.d/25-support-schema-hardening.sql; do
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
   done
 '

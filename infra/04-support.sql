@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS Apps (
     Id          SERIAL PRIMARY KEY,
     Name        VARCHAR(200) NOT NULL,
     Description VARCHAR(1000) NOT NULL,
-    Status      INTEGER NOT NULL DEFAULT 1  -- 1=Active, 2=ComingSoon, 3=Retired
+    Status      INTEGER NOT NULL DEFAULT 1,  -- 1=Active, 2=ComingSoon, 3=Retired
+    CONSTRAINT CK_Apps_Status CHECK (Status IN (1, 2, 3))
 );
 
 -- Service uptime statuses
@@ -15,7 +16,10 @@ CREATE TABLE IF NOT EXISTS ServiceStatuses (
     Name              VARCHAR(200) NOT NULL,
     State             INTEGER NOT NULL,       -- 1=Up, 2=Degraded, 3=Down
     UptimePercent30d  NUMERIC(5,2) NOT NULL DEFAULT 100.00,
-    Summary           TEXT NULL
+    Summary           TEXT NULL,
+    CONSTRAINT CK_ServiceStatuses_State CHECK (State IN (1, 2, 3)),
+    CONSTRAINT CK_ServiceStatuses_Uptime
+        CHECK (UptimePercent30d BETWEEN 0 AND 100)
 );
 
 -- Incident history
@@ -29,7 +33,12 @@ CREATE TABLE IF NOT EXISTS Incidents (
     AssignedTeam    VARCHAR(200) NOT NULL DEFAULT 'Unassigned',
     Findings        TEXT NULL,
     ResolvedAt      TIMESTAMP NULL,
-    CommunityId     INTEGER NOT NULL DEFAULT 1  -- soft reference to tsqr_communities
+    CommunityId     INTEGER NOT NULL DEFAULT 1, -- soft reference to tsqr_communities
+    DeletedAt       TIMESTAMP NULL,
+    DeletedBy       VARCHAR(200) NULL,
+    CONSTRAINT CK_Incidents_Status CHECK (Status IN (1, 2, 3)),
+    CONSTRAINT CK_Incidents_DurationMinutes CHECK (DurationMinutes >= 0),
+    CONSTRAINT CK_Incidents_CommunityId CHECK (CommunityId > 0)
 );
 
 -- Support tickets
@@ -48,7 +57,13 @@ CREATE TABLE IF NOT EXISTS Tickets (
     ResolvedAt        TIMESTAMP NULL,
     Description       TEXT NOT NULL,
     Summary           TEXT NULL,
-    CommunityId       INTEGER NOT NULL DEFAULT 1 -- soft reference to tsqr_communities
+    CommunityId       INTEGER NOT NULL DEFAULT 1, -- soft reference to tsqr_communities
+    DeletedAt         TIMESTAMP NULL,
+    DeletedBy         VARCHAR(200) NULL,
+    CONSTRAINT CK_Tickets_Category CHECK (Category IN (1, 2, 3, 4)),
+    CONSTRAINT CK_Tickets_Priority CHECK (Priority IN (1, 2, 3, 4)),
+    CONSTRAINT CK_Tickets_Status CHECK (Status IN (1, 2, 3, 4)),
+    CONSTRAINT CK_Tickets_CommunityId CHECK (CommunityId > 0)
 );
 
 -- Contact messages (linked to auto-created General Inquiry ticket)
@@ -74,6 +89,25 @@ CREATE TABLE IF NOT EXISTS AboutContent (
     Key   VARCHAR(100) PRIMARY KEY,
     Value TEXT NOT NULL
 );
+
+-- Query-path indexes. Active-row predicates keep soft-deleted rows out of
+-- the hot community/status list queries.
+CREATE INDEX IF NOT EXISTS IX_Apps_Status
+    ON Apps (Status);
+CREATE INDEX IF NOT EXISTS IX_ServiceStatuses_State
+    ON ServiceStatuses (State);
+CREATE INDEX IF NOT EXISTS IX_Incidents_CommunityId_OccurredOn
+    ON Incidents (CommunityId, OccurredOn DESC) WHERE DeletedAt IS NULL;
+CREATE INDEX IF NOT EXISTS IX_Incidents_Status
+    ON Incidents (Status) WHERE DeletedAt IS NULL;
+CREATE INDEX IF NOT EXISTS IX_Tickets_CommunityId_ReportedAt
+    ON Tickets (CommunityId, ReportedAt DESC) WHERE DeletedAt IS NULL;
+CREATE INDEX IF NOT EXISTS IX_Tickets_CommunityId_Status_ReportedAt
+    ON Tickets (CommunityId, Status, ReportedAt DESC) WHERE DeletedAt IS NULL;
+CREATE INDEX IF NOT EXISTS IX_Tickets_Status
+    ON Tickets (Status) WHERE DeletedAt IS NULL;
+CREATE INDEX IF NOT EXISTS IX_ContactMessages_TicketId
+    ON ContactMessages (TicketId);
 
 -- ================================================================
 -- Seed data
