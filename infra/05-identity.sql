@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS roles (
         CHECK (length(btrim(NormalizedName)) > 0)
 );
 
+CREATE TABLE IF NOT EXISTS roles_permissions (
+    RoleId      VARCHAR(128) NOT NULL REFERENCES roles(Id) ON DELETE CASCADE,
+    Permission  VARCHAR(100) NOT NULL,
+    PRIMARY KEY (RoleId, Permission),
+    CONSTRAINT CK_roles_permissions_Permission_NotBlank
+        CHECK (length(btrim(Permission)) > 0)
+);
+
 CREATE TABLE IF NOT EXISTS user_roles (
     UserId      UUID NOT NULL REFERENCES user_profiles(Id),
     RoleId      VARCHAR(128) NOT NULL REFERENCES roles(Id),
@@ -57,6 +65,7 @@ CREATE TABLE IF NOT EXISTS pending_email_changes (
 );
 
 CREATE INDEX IF NOT EXISTS IX_user_roles_RoleId ON user_roles(RoleId);
+CREATE INDEX IF NOT EXISTS IX_roles_permissions_Permission ON roles_permissions(Permission);
 CREATE INDEX IF NOT EXISTS IX_pending_email_changes_UserId ON pending_email_changes(UserId);
 CREATE INDEX IF NOT EXISTS IX_pending_email_changes_TokenHash ON pending_email_changes(TokenHash);
 CREATE INDEX IF NOT EXISTS IX_pending_email_changes_ExpiresAt ON pending_email_changes(ExpiresAt);
@@ -70,6 +79,39 @@ INSERT INTO roles (Id, Name, NormalizedName) VALUES
     ('repairman-role', 'Repairman', 'REPAIRMAN'),
     ('coordinator-role', 'LocationCoordinator', 'LOCATIONCOORDINATOR')
 ON CONFLICT (NormalizedName) DO NOTHING;
+
+-- Seed role capabilities. Keep these names in sync with TSQR.Common.Authorization.Permissions.
+INSERT INTO roles_permissions (RoleId, Permission)
+SELECT r.Id, p.Permission
+FROM roles r
+INNER JOIN (VALUES
+    ('Admin', 'users.manage'),
+    ('Admin', 'roles.manage'),
+    ('Admin', 'members.register'),
+    ('Admin', 'members.manage'),
+    ('Admin', 'reservations.self-service'),
+    ('Admin', 'reservations.confirm-pickup'),
+    ('Admin', 'reservations.complete'),
+    ('Admin', 'tools.manage'),
+    ('Admin', 'tools.operate'),
+    ('Admin', 'loans.manage'),
+    ('Admin', 'communities.manage'),
+    ('Admin', 'geography.manage'),
+    ('Admin', 'support.manage'),
+    ('LocationCoordinator', 'members.register'),
+    ('LocationCoordinator', 'reservations.self-service'),
+    ('LocationCoordinator', 'reservations.confirm-pickup'),
+    ('LocationCoordinator', 'reservations.complete'),
+    ('LocationCoordinator', 'tools.manage'),
+    ('LocationCoordinator', 'tools.operate'),
+    ('LocationCoordinator', 'communities.manage'),
+    ('LocationCoordinator', 'support.manage'),
+    ('Repairman', 'reservations.self-service'),
+    ('Repairman', 'reservations.confirm-pickup'),
+    ('Repairman', 'tools.operate'),
+    ('Regular', 'reservations.self-service')
+) AS p(RoleName, Permission) ON p.RoleName = r.Name
+ON CONFLICT (RoleId, Permission) DO NOTHING;
 
 -- Seed admin user profile matching autheo's seeded admin
 INSERT INTO user_profiles (Id, FirstName, LastName, CreatedAt, UpdatedAt) VALUES
