@@ -56,6 +56,14 @@ CREATE TABLE IF NOT EXISTS Members (
         CHECK (MembershipType IS NULL OR MembershipType BETWEEN 0 AND 4)
 );
 
+-- Explicit auth-subject mapping for tool-library members. JWT `sub` is a
+-- UUID, while Members.Id is an int, so the mapping is kept separate and never
+-- derived from a mutable email address.
+CREATE TABLE IF NOT EXISTS MemberAccounts (
+    MemberId    INTEGER PRIMARY KEY REFERENCES Members(Id) ON DELETE CASCADE,
+    AuthSubject UUID NOT NULL UNIQUE
+);
+
 CREATE TABLE IF NOT EXISTS InventoryItems (
     Id SERIAL PRIMARY KEY,
     ToolId INTEGER NOT NULL REFERENCES Tools(Id),
