@@ -60,6 +60,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: ${TOOL_LIB_CONNECTION}
       Jwt__Key: ${JWT_KEY}
+      InternalApi__Key: ${INTERNAL_API_KEY}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
       interval: 10s
@@ -81,10 +82,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      tool-lib:
+        condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${AUTHEO_CONNECTION}
       Jwt__Key: ${JWT_KEY}
       InternalApi__Key: ${INTERNAL_API_KEY}
+      ToolLibrary__BaseUrl: http://tool-lib:8080
       # Local dev only: no SMTP server, so the password-reset token is logged.
       Email__PasswordResetUrl: http://localhost:3000/portal/reset-password
       Email__LogResetToken: "true"
