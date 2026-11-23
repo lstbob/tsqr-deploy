@@ -124,15 +124,16 @@ docker compose exec -T postgres sh -c '
     /docker-entrypoint-initdb.d/24-communities-slug-unique.sql \
     /docker-entrypoint-initdb.d/25-support-schema-hardening.sql \
     /docker-entrypoint-initdb.d/26-identity-role-permissions.sql \
-    /docker-entrypoint-initdb.d/27-tool-library-member-accounts.sql; do
+    /docker-entrypoint-initdb.d/27-tool-library-member-accounts.sql \
+    /docker-entrypoint-initdb.d/28-communities-natural-key-unique.sql; do
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
   done
 '
 ```
 
-These scripts only add missing columns, indexes, constraints and tables and
-seed missing default policies; they never drop data and can be run more than
-once.
+These scripts only add missing columns, constraints and tables, replace the
+old non-unique geography indexes with unique ones, and seed missing default
+policies; they never drop data and can be run more than once.
 
 ## Stopping
 
