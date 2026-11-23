@@ -37,6 +37,7 @@ services:
       - ./infra/25-support-schema-hardening.sql:/docker-entrypoint-initdb.d/25-support-schema-hardening.sql:ro
       - ./infra/26-identity-role-permissions.sql:/docker-entrypoint-initdb.d/26-identity-role-permissions.sql:ro
       - ./infra/27-tool-library-member-accounts.sql:/docker-entrypoint-initdb.d/27-tool-library-member-accounts.sql:ro
+      - ./infra/28-communities-natural-key-unique.sql:/docker-entrypoint-initdb.d/28-communities-natural-key-unique.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
