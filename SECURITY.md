@@ -10,23 +10,29 @@ be treated as compromised.
 
 | Secret | Was hardcoded in | Now sourced from | Action |
 |---|---|---|---|
-| JWT signing key (HMAC) | `tsqr-gateway` `appsettings.json`, `tsqr-tool-lib` `appsettings.json`, `docker-compose.yml` | `JWT_KEY` env (`.env`) → `Jwt__Key` for both gateway and tool-lib | **Generate a new random key** (>= 32 bytes) and set it in `.env`. The old value `ThisIsASecretKeyForTsqrIdentity_...` (and the compose `dev-key-not-for-production-use-32chars!`) are burned. |
+| JWT signing key (HMAC, retired) | `tsqr-gateway` `appsettings.json`, `tsqr-tool-lib` `appsettings.json`, `docker-compose.yml` | Replaced by RS256: `JWT_PRIVATE_KEY_BASE64` (autheo only) and `JWT_PUBLIC_KEY_BASE64` (all verifiers) | The old HMAC key is no longer used. The old value `ThisIsASecretKeyForTsqrIdentity_...` (and the compose `dev-key-not-for-production-use-32chars!`) are burned and must not be reused. |
 | Postgres credentials | `docker-compose.yml`, `tsqr-tool-lib` `appsettings.json` | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `TOOL_LIB_CONNECTION` env (`.env`) | Set a strong DB password in `.env`; rotate the DB role's password if the old `postgres/postgres` was ever used on a real instance. |
 
-The gateway and tool-lib share one symmetric signing key, so `JWT_KEY` must be
-**identical** for both services (the compose file wires both from the same var).
+Autheo holds the only private key. Every other service validates with the public
+key and enforces the active `kid` from `JWT_KEY_ID`.
 
-## Generating a JWT key
+## Generating a JWT signing key pair
 
 ```sh
-openssl rand -base64 48
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out jwt-private.pem
+openssl rsa -in jwt-private.pem -pubout -out jwt-public.pem
+base64 -w0 jwt-private.pem > jwt-private.b64
+base64 -w0 jwt-public.pem > jwt-public.b64
 ```
+
+Paste the base64 contents into `.env`. Production should mount the private key
+from a secret store instead of an environment variable.
 
 ## First-time setup
 
 ```sh
 cp .env.example .env
-# edit .env: replace every CHANGE_ME value (DB password + JWT_KEY)
+# edit .env: replace every CHANGE_ME value (DB password + RSA key pair)
 docker compose up --build
 ```
 
@@ -34,8 +40,10 @@ docker compose up --build
 
 ## Notes / known follow-ups (not addressed here)
 
-- Both .NET services fail fast on startup if `Jwt__Key` (and tool-lib's
-  connection string) are not provided — this is intentional (fail closed).
+- Autheo fails fast on startup if the RSA private key is missing or invalid;
+  verifiers fail fast if the RSA public key is missing or invalid. Tool-lib also
+  fails fast when its connection string is missing — all intentional (fail
+  closed).
 - Postgres is published on `127.0.0.1:5432` only (host-local admin access), not
   on all interfaces.
 - Pre-existing, out of scope for this security pass: the compose file has a
