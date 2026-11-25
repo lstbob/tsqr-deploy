@@ -163,7 +163,22 @@ Key environment variables (set in `.env`):
 | `TOOL_LIB_CONNECTION` | tool-lib → PostgreSQL connection string |
 | `AUTHEO_CONNECTION` | autheo → PostgreSQL connection string |
 | `SUPPORT_CONNECTION` | support → PostgreSQL connection string |
-| `JWT_KEY` | Shared JWT signing key — **MUST be identical** across gateway, tool-lib, autheo, identity, support |
+| `JWT_PRIVATE_KEY_BASE64` | Base64-encoded PKCS#8 PEM RSA private key — **autheo only** |
+| `JWT_PUBLIC_KEY_BASE64` | Base64-encoded SPKI PEM RSA public key — every verifier |
+| `JWT_KEY_ID` | Active RS256 key id emitted as the JWT `kid` header; must match across services |
 | `INTERNAL_API_KEY` | Shared service-to-service key for identity → autheo email-change calls |
 | `API_URL` | Next.js → Gateway URL (internal Docker network) |
 | `NEXT_PUBLIC_SUPPORT_URL` | Support portal URL for the Support tab link in tsqr-ui |
+
+Generate the local RS256 key pair with:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out jwt-private.pem
+openssl rsa -in jwt-private.pem -pubout -out jwt-public.pem
+base64 -w0 jwt-private.pem > jwt-private.b64
+base64 -w0 jwt-public.pem > jwt-public.b64
+```
+
+Paste the base64 file contents into `.env`. The private key is passed only to the
+autheo container; all other services receive the public key. Production should
+mount the private key from a secret store instead of an environment variable.

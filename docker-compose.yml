@@ -60,7 +60,8 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${TOOL_LIB_CONNECTION}
-      Jwt__Key: ${JWT_KEY}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
       InternalApi__Key: ${INTERNAL_API_KEY}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
@@ -87,7 +88,10 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${AUTHEO_CONNECTION}
-      Jwt__Key: ${JWT_KEY}
+      # The private key is mounted only into autheo. Verifiers get the public key.
+      Jwt__PrivateKeyBase64: ${JWT_PRIVATE_KEY_BASE64}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
       InternalApi__Key: ${INTERNAL_API_KEY}
       ToolLibrary__BaseUrl: http://tool-lib:8080
       # Local dev only: no SMTP server, so the password-reset token is logged.
@@ -117,7 +121,8 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__IdentityDb: ${IDENTITY_CONNECTION}
-      Jwt__Key: ${JWT_KEY}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
       Autheo__BaseUrl: http://autheo:8080
       Autheo__InternalApiKey: ${INTERNAL_API_KEY}
       # Local dev only: no SMTP server, so the confirmation token is logged.
@@ -147,7 +152,8 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${SUPPORT_CONNECTION}
-      Jwt__Key: ${JWT_KEY}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
       ASPNETCORE_ENVIRONMENT: Production
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
@@ -164,6 +170,8 @@ services:
     build:
       context: ../tsqr-gateway
       dockerfile: Dockerfile
+      additional_contexts:
+        - common=../tsqr-common
     container_name: tsqr-gateway
     ports:
       - "5000:8080"
@@ -182,7 +190,8 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
-      Jwt__Key: ${JWT_KEY}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
     security_opt:
       - no-new-privileges:true
     networks:
@@ -217,7 +226,8 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${SOUP_KITCHEN_CONNECTION}
-      Jwt__Key: ${JWT_KEY}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
       interval: 10s
@@ -241,7 +251,8 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${COMMUNITIES_CONNECTION}
-      Jwt__Key: ${JWT_KEY}
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__KeyId: ${JWT_KEY_ID}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
       interval: 10s
