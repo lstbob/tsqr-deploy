@@ -14,7 +14,8 @@ be treated as compromised.
 | Postgres credentials | `docker-compose.yml`, `tsqr-tool-lib` `appsettings.json` | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `TOOL_LIB_CONNECTION` env (`.env`) | Set a strong DB password in `.env`; rotate the DB role's password if the old `postgres/postgres` was ever used on a real instance. |
 
 Autheo holds the only private key. Every other service validates with the public
-key and enforces the active `kid` from `JWT_KEY_ID`.
+key and accepts only the `kid` values listed in `JWT_PUBLIC_KEYS` (or the single
+`JWT_PUBLIC_KEY_BASE64` when no ring is configured).
 
 ## Generating a JWT signing key pair
 
@@ -27,6 +28,31 @@ base64 -w0 jwt-public.pem > jwt-public.b64
 
 Paste the base64 contents into `.env`. Production should mount the private key
 from a secret store instead of an environment variable.
+
+## Rotating the JWT signing key
+
+Autheo publishes every public key in the ring at
+`https://<gateway>/.well-known/jwks.json`. Rotate without invalidating access
+tokens that were issued just before the switch:
+
+1. Generate the new key pair (`jwt-v2-private.pem` / `jwt-v2-public.pem`).
+2. Add the new public key to `JWT_PUBLIC_KEYS` on every service, keeping the old
+   one. Deploy the verifiers first:
+   ```sh
+   JWT_PUBLIC_KEYS="tsqr-autheo-v1=$(cat jwt-v1-public.b64);tsqr-autheo-v2=$(cat jwt-v2-public.b64)"
+   ```
+3. Change autheo's `JWT_PRIVATE_KEY_BASE64` to the new private key, set
+   `JWT_KEY_ID=tsqr-autheo-v2`, and set `JWT_PUBLIC_KEY_BASE64` to the new public
+   key. Keep both keys in `JWT_PUBLIC_KEYS`. Deploy autheo.
+4. Verify:
+   - New logins carry `kid=tsqr-autheo-v2`.
+   - A token captured before the switch still authenticates.
+   - `/.well-known/jwks.json` lists both keys.
+5. After the 15-minute access-token lifetime, remove the old key from
+   `JWT_PUBLIC_KEYS` and deploy the verifiers and autheo again.
+
+Docker Compose passes `JWT_PUBLIC_KEYS` to autheo and every verifier as
+`Jwt__PublicKeys`. An empty value uses the single-key compatibility path.
 
 ## First-time setup
 
