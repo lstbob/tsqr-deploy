@@ -166,6 +166,7 @@ Key environment variables (set in `.env`):
 | `JWT_PRIVATE_KEY_BASE64` | Base64-encoded PKCS#8 PEM RSA private key — **autheo only** |
 | `JWT_PUBLIC_KEY_BASE64` | Base64-encoded SPKI PEM RSA public key — every verifier |
 | `JWT_KEY_ID` | Active RS256 key id emitted as the JWT `kid` header; must match across services |
+| `JWT_PUBLIC_KEYS` | Optional `kid=base64Pem` ring for rotation; verifiers accept every listed key. Empty uses the single key above. See `SECURITY.md`. |
 | `INTERNAL_API_KEY` | Shared service-to-service key for identity → autheo email-change calls |
 | `API_URL` | Next.js → Gateway URL (internal Docker network) |
 | `NEXT_PUBLIC_SUPPORT_URL` | Support portal URL for the Support tab link in tsqr-ui |
@@ -182,3 +183,7 @@ base64 -w0 jwt-public.pem > jwt-public.b64
 Paste the base64 file contents into `.env`. The private key is passed only to the
 autheo container; all other services receive the public key. Production should
 mount the private key from a secret store instead of an environment variable.
+
+Autheo publishes the public key ring through the gateway at
+`/.well-known/jwks.json`. To rotate without breaking in-flight tokens, follow
+the steps in `SECURITY.md`.
