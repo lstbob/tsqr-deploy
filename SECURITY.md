@@ -17,6 +17,30 @@ Autheo holds the only private key. Every other service validates with the public
 key and accepts only the `kid` values listed in `JWT_PUBLIC_KEYS` (or the single
 `JWT_PUBLIC_KEY_BASE64` when no ring is configured).
 
+## Audience model and token exchange
+
+Each token is scoped to exactly one audience:
+
+- Login and refresh issue **user access tokens** with `aud=tsqr-gateway`. Only
+  the gateway validates them.
+- The gateway exchanges a user token for a short-lived **service token** with
+  `aud=tsqr-<service>` before forwarding a protected request. Each downstream
+  service validates only its own audience, so a token minted for service A is
+  rejected by service B.
+- The exchange endpoint is `POST /internal/auth/exchange` on autheo, outside
+  `/api` so it cannot be reached through a public gateway catch-all route. It
+  requires the shared `INTERNAL_API_KEY` in `X-Internal-Api-Key` and accepts
+  source tokens for `tsqr-gateway` and `tsqr-identity` by default.
+- The gateway now requires `InternalApi__Key` and fails fast without it.
+  Identity uses the same exchange endpoint before calling autheo's internal
+  change-email endpoint, preserving the user's `sub` and claims without
+  forwarding an identity-audience token to autheo.
+
+The service-token lifetime defaults to five minutes and is capped by the source
+token's remaining lifetime. The gateway caches exchanged tokens in memory until
+shortly before expiry. Do not forward a gateway user token directly to a
+downstream service; that bypasses audience isolation.
+
 ## Generating a JWT signing key pair
 
 ```sh
