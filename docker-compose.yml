@@ -60,6 +60,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${TOOL_LIB_CONNECTION}
+      Jwt__Audience: tsqr-tool-lib
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
@@ -90,6 +91,10 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: ${AUTHEO_CONNECTION}
       # The private key is mounted only into autheo. Verifiers get the public key.
+      Jwt__Audience: tsqr-autheo
+      Jwt__UserAudience: tsqr-gateway
+      Jwt__ServiceAudiences: tsqr-autheo;tsqr-tool-lib;tsqr-support;tsqr-identity;tsqr-soup-kitchen;tsqr-communities
+      Jwt__ExchangeSourceAudiences: tsqr-gateway;tsqr-identity
       Jwt__PrivateKeyBase64: ${JWT_PRIVATE_KEY_BASE64}
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
@@ -123,6 +128,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__IdentityDb: ${IDENTITY_CONNECTION}
+      Jwt__Audience: tsqr-identity
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
@@ -155,6 +161,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${SUPPORT_CONNECTION}
+      Jwt__Audience: tsqr-support
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
@@ -194,9 +201,11 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
+      Jwt__Audience: tsqr-gateway
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
+      InternalApi__Key: ${INTERNAL_API_KEY}
     security_opt:
       - no-new-privileges:true
     networks:
@@ -231,6 +240,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${SOUP_KITCHEN_CONNECTION}
+      Jwt__Audience: tsqr-soup-kitchen
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
@@ -257,6 +267,7 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__DefaultConnection: ${COMMUNITIES_CONNECTION}
+      Jwt__Audience: tsqr-communities
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
