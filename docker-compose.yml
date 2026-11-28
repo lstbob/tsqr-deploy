@@ -39,6 +39,7 @@ services:
       - ./infra/27-tool-library-member-accounts.sql:/docker-entrypoint-initdb.d/27-tool-library-member-accounts.sql:ro
       - ./infra/28-communities-natural-key-unique.sql:/docker-entrypoint-initdb.d/28-communities-natural-key-unique.sql:ro
       - ./infra/29-tool-library-lost-status.sql:/docker-entrypoint-initdb.d/29-tool-library-lost-status.sql:ro
+      - ./infra/30-learning.sql:/docker-entrypoint-initdb.d/30-learning.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
       interval: 5s
@@ -94,7 +95,7 @@ services:
       # The private key is mounted only into autheo. Verifiers get the public key.
       Jwt__Audience: tsqr-autheo
       Jwt__UserAudience: tsqr-gateway
-      Jwt__ServiceAudiences: tsqr-autheo;tsqr-tool-lib;tsqr-support;tsqr-identity;tsqr-soup-kitchen;tsqr-communities
+      Jwt__ServiceAudiences: tsqr-autheo;tsqr-tool-lib;tsqr-support;tsqr-identity;tsqr-soup-kitchen;tsqr-communities;tsqr-learning
       Jwt__ExchangeSourceAudiences: tsqr-gateway;tsqr-identity
       Jwt__PrivateKeyBase64: ${JWT_PRIVATE_KEY_BASE64}
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
@@ -200,6 +201,8 @@ services:
         condition: service_healthy
       communities:
         condition: service_healthy
+      learning:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Docker"
       Jwt__Audience: tsqr-gateway
@@ -269,6 +272,33 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: ${COMMUNITIES_CONNECTION}
       Jwt__Audience: tsqr-communities
+      Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
+      Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
+      Jwt__KeyId: ${JWT_KEY_ID}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - tsqr-net
+
+  learning:
+    build:
+      context: ../tsqr-learning
+      dockerfile: Dockerfile
+      additional_contexts:
+        - common=../tsqr-common
+    container_name: tsqr-learning
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: ${LEARNING_CONNECTION}
+      Jwt__Audience: tsqr-learning
       Jwt__PublicKeyBase64: ${JWT_PUBLIC_KEY_BASE64}
       Jwt__PublicKeys: ${JWT_PUBLIC_KEYS}
       Jwt__KeyId: ${JWT_KEY_ID}
