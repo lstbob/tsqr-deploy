@@ -32,8 +32,9 @@ Docker Compose orchestration for the full TSQR microservice architecture.
 | `autheo` | .NET 10 / Dapper | — | 8080 | Authentication service — JWT issuance + refresh |
 | `tool-lib` | .NET 10 / Dapper | — | 8080 | Tool library API (internal, not exposed) |
 | `support` | .NET 10 / Dapper | — | 8080 | Support backend — tickets, uptime, contact (internal) |
+| `learning` | .NET 10 / Dapper | — | 8080 | Learning API (internal, reached only through the gateway at `/api/learning`; port 5100 is for local runs only) |
 | `support-ui` | Angular 20 / nginx | **4200** | 80 | Support portal frontend (standalone, proxies /api to support backend) |
-| `postgres` | PostgreSQL 16 | 5432 | 5432 | Database — 3 databases (exposed for admin tools only) |
+| `postgres` | PostgreSQL 16 | 5432 | 5432 | Database — one database per service (exposed for admin tools only) |
 
 ## Request Flow
 
@@ -102,7 +103,17 @@ repository's default branch for services that opt in with `push-image: true`.
 
 The files in `infra/` are PostgreSQL init scripts: they run only when the
 `pgdata` volume is first created. If you already have a volume from an older
-checkout, apply the idempotent retrofit scripts after `docker compose up`:
+checkout, follow these steps after `docker compose up`.
+
+1. Create any missing database:
+
+```bash
+docker compose exec -T postgres bash /docker-entrypoint-initdb.d/01-create-dbs.sh
+```
+
+   The script is safe to run again. It skips each database that exists.
+
+2. Apply the idempotent retrofit scripts:
 
 ```bash
 docker compose exec -T postgres sh -c '
@@ -126,7 +137,8 @@ docker compose exec -T postgres sh -c '
     /docker-entrypoint-initdb.d/26-identity-role-permissions.sql \
     /docker-entrypoint-initdb.d/27-tool-library-member-accounts.sql \
     /docker-entrypoint-initdb.d/28-communities-natural-key-unique.sql \
-    /docker-entrypoint-initdb.d/29-tool-library-lost-status.sql; do
+    /docker-entrypoint-initdb.d/29-tool-library-lost-status.sql \
+    /docker-entrypoint-initdb.d/30-learning.sql; do
     psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -f "$f"
   done
 '
@@ -164,6 +176,7 @@ Key environment variables (set in `.env`):
 | `TOOL_LIB_CONNECTION` | tool-lib → PostgreSQL connection string |
 | `AUTHEO_CONNECTION` | autheo → PostgreSQL connection string |
 | `SUPPORT_CONNECTION` | support → PostgreSQL connection string |
+| `LEARNING_CONNECTION` | learning → PostgreSQL connection string |
 | `JWT_PRIVATE_KEY_BASE64` | Base64-encoded PKCS#8 PEM RSA private key — **autheo only** |
 | `JWT_PUBLIC_KEY_BASE64` | Base64-encoded SPKI PEM RSA public key — every verifier |
 | `JWT_KEY_ID` | Active RS256 key id emitted as the JWT `kid` header; must match across services |
